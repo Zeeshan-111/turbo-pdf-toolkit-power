@@ -1,5 +1,5 @@
 
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
 
@@ -61,7 +61,7 @@ export class PDFUtils {
     
     const pages = pdf.getPages();
     pages.forEach(page => {
-      page.setRotation({ angle: rotation });
+      page.setRotation(degrees(rotation));
     });
     
     return await pdf.save();
@@ -82,7 +82,7 @@ export class PDFUtils {
         font,
         color: rgb(0.7, 0.7, 0.7),
         opacity,
-        rotate: { angle: 45 }
+        rotate: degrees(45)
       });
     });
     

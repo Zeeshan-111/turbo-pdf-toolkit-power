@@ -53,6 +53,13 @@ const Index = () => {
       route: "/tools/pdf-to-jpg"
     },
     {
+      id: "jpg-to-pdf",
+      title: "JPG to PDF",
+      description: "Convert JPG images to PDF documents",
+      category: "conversion",
+      route: "/tools/jpg-to-pdf"
+    },
+    {
       id: "split-pdf",
       title: "Split PDF",
       description: "Extract specific pages from PDF files",

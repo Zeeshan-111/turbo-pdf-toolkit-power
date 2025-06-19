@@ -1,11 +1,11 @@
+
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
 
-// Configure PDF.js worker with a more reliable approach
+// Disable PDF.js worker completely for better browser compatibility
 if (typeof window !== 'undefined') {
-  // Use a local worker or disable worker for better compatibility
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = null;
 }
 
 export class PDFUtils {
@@ -155,12 +155,15 @@ export class PDFUtils {
     try {
       const arrayBuffer = await this.fileToArrayBuffer(file);
       
-      // Try to load the PDF with PDF.js
+      // Load PDF with worker disabled for maximum compatibility
       const loadingTask = pdfjsLib.getDocument({ 
         data: arrayBuffer,
         useWorkerFetch: false,
         isEvalSupported: false,
-        useSystemFonts: true
+        useSystemFonts: true,
+        disableAutoFetch: true,
+        disableStream: true,
+        disableRange: true
       });
       
       const pdf = await loadingTask.promise;
@@ -179,10 +182,17 @@ export class PDFUtils {
         }
       }
       
+      if (!fullText.trim()) {
+        throw new Error('No text content found in the PDF. The PDF might contain only images or be password protected.');
+      }
+      
       return fullText.trim();
     } catch (error) {
       console.error('PDF text extraction error:', error);
-      throw new Error('Failed to extract text from PDF. The file might be corrupted or contain only images.');
+      if (error instanceof Error && error.message.includes('No text content found')) {
+        throw error;
+      }
+      throw new Error('Failed to extract text from PDF. Please ensure the file is not corrupted and contains readable text.');
     }
   }
 

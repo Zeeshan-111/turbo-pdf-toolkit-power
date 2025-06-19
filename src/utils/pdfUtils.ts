@@ -1,10 +1,12 @@
-
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Configure PDF.js worker with a more reliable approach
+if (typeof window !== 'undefined') {
+  // Use a local worker or disable worker for better compatibility
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+}
 
 export class PDFUtils {
   static async fileToArrayBuffer(file: File): Promise<ArrayBuffer> {
@@ -150,18 +152,38 @@ export class PDFUtils {
   }
 
   static async extractText(file: File): Promise<string> {
-    const arrayBuffer = await this.fileToArrayBuffer(file);
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let fullText = '';
-    
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items.map((item: any) => item.str).join(' ');
-      fullText += `Page ${i}:\n${pageText}\n\n`;
+    try {
+      const arrayBuffer = await this.fileToArrayBuffer(file);
+      
+      // Try to load the PDF with PDF.js
+      const loadingTask = pdfjsLib.getDocument({ 
+        data: arrayBuffer,
+        useWorkerFetch: false,
+        isEvalSupported: false,
+        useSystemFonts: true
+      });
+      
+      const pdf = await loadingTask.promise;
+      let fullText = '';
+      
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .filter((item: any) => item.str && item.str.trim())
+          .map((item: any) => item.str)
+          .join(' ');
+        
+        if (pageText.trim()) {
+          fullText += `${pageText}\n\n`;
+        }
+      }
+      
+      return fullText.trim();
+    } catch (error) {
+      console.error('PDF text extraction error:', error);
+      throw new Error('Failed to extract text from PDF. The file might be corrupted or contain only images.');
     }
-    
-    return fullText;
   }
 
   static async compressPDF(file: File): Promise<Uint8Array> {

@@ -7,19 +7,21 @@ import { Progress } from "@/components/ui/progress";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
+import { PDFUtils } from "@/utils/pdfUtils";
 
 const PDFToWord = () => {
   const [file, setFile] = useState<File | null>(null);
   const [isConverting, setIsConverting] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [convertedText, setConvertedText] = useState<string | null>(null);
   const { toast } = useToast();
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const uploadedFile = acceptedFiles[0];
     if (uploadedFile && uploadedFile.type === "application/pdf") {
       setFile(uploadedFile);
-      setDownloadUrl(null);
+      setConvertedText(null);
+      setProgress(0);
       toast({
         title: "File uploaded successfully",
         description: `${uploadedFile.name} is ready for conversion.`,
@@ -45,37 +47,69 @@ const PDFToWord = () => {
     if (!file) return;
 
     setIsConverting(true);
-    setProgress(0);
+    setProgress(10);
 
-    // Simulate conversion process
-    const progressInterval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 90) {
-          clearInterval(progressInterval);
-          return 90;
-        }
-        return prev + 10;
-      });
-    }, 200);
+    try {
+      console.log("Starting PDF to text extraction...");
+      
+      // Extract text from PDF
+      setProgress(30);
+      const extractedText = await PDFUtils.extractText(file);
+      setProgress(70);
+      
+      if (!extractedText.trim()) {
+        throw new Error("No text content found in the PDF. The PDF might contain only images.");
+      }
 
-    // Simulate API call
-    setTimeout(() => {
+      setConvertedText(extractedText);
       setProgress(100);
-      setIsConverting(false);
-      setDownloadUrl("sample-converted.docx"); // This would be the actual download URL
+
       toast({
         title: "Conversion completed!",
-        description: "Your PDF has been successfully converted to Word format.",
+        description: "Your PDF text has been extracted successfully.",
       });
-    }, 3000);
+    } catch (error) {
+      console.error("Conversion error:", error);
+      toast({
+        title: "Conversion failed",
+        description: error instanceof Error ? error.message : "An error occurred during conversion.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConverting(false);
+    }
   };
 
   const handleDownload = () => {
-    // In a real implementation, this would trigger the actual download
-    toast({
-      title: "Download started",
-      description: "Your converted file is being downloaded.",
-    });
+    if (!convertedText || !file) return;
+
+    try {
+      // Create a simple RTF document (Rich Text Format) which can be opened by Word
+      const rtfContent = `{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}}
+\\f0\\fs24 ${convertedText.replace(/\n/g, '\\par ')}}`;
+      
+      const blob = new Blob([rtfContent], { type: 'application/rtf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${file.name.replace('.pdf', '')}_converted.rtf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download started",
+        description: "Your converted file is being downloaded as RTF format.",
+      });
+    } catch (error) {
+      console.error("Download error:", error);
+      toast({
+        title: "Download failed",
+        description: "An error occurred while downloading the file.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -92,7 +126,7 @@ const PDFToWord = () => {
             PDF to Word Converter
           </h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Convert your PDF files to editable Word documents (.docx) while preserving formatting and layout.
+            Extract text content from PDF files and download as RTF format (compatible with Word).
           </p>
         </div>
 
@@ -144,13 +178,13 @@ const PDFToWord = () => {
         {file && (
           <div className="bg-gray-800 rounded-2xl p-8 border border-gray-700 mb-8">
             <div className="text-center space-y-6">
-              {!isConverting && !downloadUrl && (
+              {!isConverting && !convertedText && (
                 <Button
                   onClick={handleConvert}
                   size="lg"
                   className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-8 py-3 text-lg"
                 >
-                  Convert to Word
+                  Extract Text from PDF
                 </Button>
               )}
 
@@ -158,7 +192,7 @@ const PDFToWord = () => {
                 <div className="space-y-4">
                   <div className="flex items-center justify-center space-x-2">
                     <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
-                    <span className="text-lg">Converting your PDF...</span>
+                    <span className="text-lg">Extracting text from PDF...</span>
                   </div>
                   <div className="max-w-md mx-auto">
                     <Progress value={progress} className="h-3" />
@@ -167,23 +201,32 @@ const PDFToWord = () => {
                 </div>
               )}
 
-              {downloadUrl && (
+              {convertedText && (
                 <div className="space-y-4">
                   <CheckCircle className="w-12 h-12 text-green-400 mx-auto" />
                   <div>
                     <h3 className="text-xl font-semibold text-green-400 mb-2">
-                      Conversion Complete!
+                      Text Extraction Complete!
                     </h3>
                     <p className="text-gray-300 mb-4">
-                      Your PDF has been successfully converted to Word format.
+                      Text has been successfully extracted from your PDF.
                     </p>
+                    
+                    {/* Preview of extracted text */}
+                    <div className="bg-gray-700 rounded-lg p-4 mb-4 max-h-40 overflow-y-auto text-left">
+                      <p className="text-sm text-gray-300 whitespace-pre-wrap">
+                        {convertedText.substring(0, 500)}
+                        {convertedText.length > 500 && "..."}
+                      </p>
+                    </div>
+                    
                     <Button
                       onClick={handleDownload}
                       size="lg"
                       className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-8 py-3 text-lg"
                     >
                       <Download className="w-5 h-5 mr-2" />
-                      Download Word File
+                      Download as RTF
                     </Button>
                   </div>
                 </div>
@@ -198,9 +241,9 @@ const PDFToWord = () => {
             <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center mb-4">
               <FileText className="w-6 h-6 text-blue-400" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">High Quality</h3>
+            <h3 className="text-lg font-semibold mb-2">Text Extraction</h3>
             <p className="text-gray-400">
-              Maintains original formatting, fonts, and layout during conversion.
+              Extracts all readable text content from your PDF files.
             </p>
           </div>
           
@@ -208,9 +251,9 @@ const PDFToWord = () => {
             <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center mb-4">
               <CheckCircle className="w-6 h-6 text-green-400" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">Fast Processing</h3>
+            <h3 className="text-lg font-semibold mb-2">RTF Format</h3>
             <p className="text-gray-400">
-              Convert your PDF files to Word format in just a few seconds.
+              Downloads as RTF format which is compatible with Microsoft Word.
             </p>
           </div>
           
@@ -218,9 +261,9 @@ const PDFToWord = () => {
             <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center mb-4">
               <AlertCircle className="w-6 h-6 text-purple-400" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">Secure & Private</h3>
+            <h3 className="text-lg font-semibold mb-2">Client-Side Processing</h3>
             <p className="text-gray-400">
-              Your files are processed locally and never stored on our servers.
+              Your files are processed locally in your browser for privacy.
             </p>
           </div>
         </div>

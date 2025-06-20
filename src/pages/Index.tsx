@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, FileText, Zap, Shield, Brain } from "lucide-react";
@@ -53,11 +52,25 @@ const Index = () => {
       route: "/tools/pdf-to-jpg"
     },
     {
+      id: "pdf-to-png",
+      title: "PDF to PNG",
+      description: "Convert PDF pages to high-quality PNG images",
+      category: "conversion",
+      route: "/tools/pdf-to-png"
+    },
+    {
       id: "jpg-to-pdf",
       title: "JPG to PDF",
       description: "Convert JPG images to PDF documents",
       category: "conversion",
       route: "/tools/jpg-to-pdf"
+    },
+    {
+      id: "png-to-pdf",
+      title: "PNG to PDF",
+      description: "Convert PNG images to PDF documents",
+      category: "conversion",
+      route: "/tools/png-to-pdf"
     },
     {
       id: "split-pdf",

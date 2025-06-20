@@ -9,6 +9,8 @@ import Blog from "./pages/Blog";
 import PDFToWord from "./pages/tools/PDFToWord";
 import PDFToJPG from "./pages/tools/PDFToJPG";
 import JPGToPDF from "./pages/tools/JPGToPDF";
+import PDFToPNG from "./pages/tools/PDFToPNG";
+import PNGToPDF from "./pages/tools/PNGToPDF";
 import MergePDF from "./pages/tools/MergePDF";
 import NotFound from "./pages/NotFound";
 
@@ -26,8 +28,9 @@ const App = () => (
           <Route path="/tools/pdf-to-word" element={<PDFToWord />} />
           <Route path="/tools/pdf-to-jpg" element={<PDFToJPG />} />
           <Route path="/tools/jpg-to-pdf" element={<JPGToPDF />} />
+          <Route path="/tools/pdf-to-png" element={<PDFToPNG />} />
+          <Route path="/tools/png-to-pdf" element={<PNGToPDF />} />
           <Route path="/tools/merge-pdf" element={<MergePDF />} />
-          {/* Add more tool routes here */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

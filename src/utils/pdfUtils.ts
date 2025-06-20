@@ -109,7 +109,8 @@ export class PDFUtils {
         viewport: viewport
       }).promise;
       
-      const imageData = canvas.toDataURL(`image/${format}`, 0.9);
+      // Use the specified format and quality
+      const imageData = canvas.toDataURL(`image/${format}`, format === 'png' ? 1.0 : 0.9);
       images.push(imageData);
     }
     

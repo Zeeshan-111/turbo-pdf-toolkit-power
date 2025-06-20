@@ -1,4 +1,3 @@
-
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
@@ -197,19 +196,36 @@ export class PDFUtils {
     }
   }
 
-  static async compressPDF(file: File): Promise<Uint8Array> {
+  static async compressPDF(file: File, compressionLevel: 'low' | 'medium' | 'high' = 'medium'): Promise<Uint8Array> {
     const arrayBuffer = await this.fileToArrayBuffer(file);
     const pdf = await PDFDocument.load(arrayBuffer);
     
-    // Basic compression by removing metadata and optimizing
-    pdf.setTitle('');
-    pdf.setAuthor('');
-    pdf.setSubject('');
-    pdf.setKeywords([]);
+    // Get compression settings based on level
+    const compressionSettings = {
+      low: { imageQuality: 0.9, removeMetadata: false },
+      medium: { imageQuality: 0.7, removeMetadata: true },
+      high: { imageQuality: 0.5, removeMetadata: true }
+    };
     
+    const settings = compressionSettings[compressionLevel];
+    
+    // Remove metadata for better compression
+    if (settings.removeMetadata) {
+      pdf.setTitle('');
+      pdf.setAuthor('');
+      pdf.setSubject('');
+      pdf.setKeywords([]);
+      pdf.setProducer('');
+      pdf.setCreator('');
+      pdf.setCreationDate(undefined);
+      pdf.setModificationDate(undefined);
+    }
+    
+    // Basic compression by optimizing the PDF structure
     return await pdf.save({
-      useObjectStreams: false,
-      addDefaultPage: false
+      useObjectStreams: true,
+      addDefaultPage: false,
+      objectsPerTick: 50
     });
   }
 

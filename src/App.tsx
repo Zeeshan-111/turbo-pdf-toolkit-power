@@ -13,6 +13,7 @@ import PDFToPNG from "./pages/tools/PDFToPNG";
 import PNGToPDF from "./pages/tools/PNGToPDF";
 import MergePDF from "./pages/tools/MergePDF";
 import SplitPDF from "./pages/tools/SplitPDF";
+import CompressPDF from "./pages/tools/CompressPDF";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
           <Route path="/tools/png-to-pdf" element={<PNGToPDF />} />
           <Route path="/tools/merge-pdf" element={<MergePDF />} />
           <Route path="/tools/split-pdf" element={<SplitPDF />} />
+          <Route path="/tools/compress-pdf" element={<CompressPDF />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

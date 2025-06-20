@@ -1,11 +1,10 @@
-
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
 
-// Disable PDF.js worker completely for better browser compatibility
+// Configure PDF.js worker - use empty string to disable worker
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = null;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 }
 
 export class PDFUtils {
@@ -155,9 +154,10 @@ export class PDFUtils {
     try {
       const arrayBuffer = await this.fileToArrayBuffer(file);
       
-      // Load PDF with worker disabled for maximum compatibility
+      // Load PDF without worker for maximum compatibility
       const loadingTask = pdfjsLib.getDocument({ 
         data: arrayBuffer,
+        worker: null,
         useWorkerFetch: false,
         isEvalSupported: false,
         useSystemFonts: true,

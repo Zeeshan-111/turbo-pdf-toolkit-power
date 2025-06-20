@@ -1,3 +1,4 @@
+
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
@@ -30,19 +31,18 @@ export class PDFUtils {
     return await mergedPdf.save();
   }
 
-  static async splitPDF(file: File, pageRanges: number[][]): Promise<Uint8Array[]> {
+  static async splitPDF(file: File, selectedPages: number[]): Promise<Uint8Array> {
     const arrayBuffer = await this.fileToArrayBuffer(file);
     const pdf = await PDFDocument.load(arrayBuffer);
-    const results: Uint8Array[] = [];
+    const newPdf = await PDFDocument.create();
     
-    for (const range of pageRanges) {
-      const newPdf = await PDFDocument.create();
-      const pages = await newPdf.copyPages(pdf, range);
-      pages.forEach((page) => newPdf.addPage(page));
-      results.push(await newPdf.save());
-    }
+    // Convert 1-based page numbers to 0-based indices
+    const pageIndices = selectedPages.map(pageNum => pageNum - 1);
     
-    return results;
+    const pages = await newPdf.copyPages(pdf, pageIndices);
+    pages.forEach((page) => newPdf.addPage(page));
+    
+    return await newPdf.save();
   }
 
   static async extractPages(file: File, pageNumbers: number[]): Promise<Uint8Array> {
@@ -97,7 +97,7 @@ export class PDFUtils {
     
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: 2.0 });
+      const viewport = page.getViewport({ scale: 1.5 });
       
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d')!;

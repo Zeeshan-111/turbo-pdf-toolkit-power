@@ -37,6 +37,14 @@ const Index = () => {
       popular: true
     },
     {
+      id: "split-pdf",
+      title: "Split PDF",
+      description: "Extract specific pages from PDF files",
+      category: "editing",
+      route: "/tools/split-pdf",
+      popular: true
+    },
+    {
       id: "compress-pdf",
       title: "Compress PDF",
       description: "Reduce PDF file size while maintaining quality",
@@ -71,13 +79,6 @@ const Index = () => {
       description: "Convert PNG images to PDF documents",
       category: "conversion",
       route: "/tools/png-to-pdf"
-    },
-    {
-      id: "split-pdf",
-      title: "Split PDF",
-      description: "Extract specific pages from PDF files",
-      category: "editing",
-      route: "/tools/split-pdf"
     },
     {
       id: "lock-pdf",

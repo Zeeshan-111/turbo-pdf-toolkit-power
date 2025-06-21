@@ -14,6 +14,9 @@ import PNGToPDF from "./pages/tools/PNGToPDF";
 import MergePDF from "./pages/tools/MergePDF";
 import SplitPDF from "./pages/tools/SplitPDF";
 import CompressPDF from "./pages/tools/CompressPDF";
+import LockPDF from "./pages/tools/LockPDF";
+import WordToPDF from "./pages/tools/WordToPDF";
+import PDFReader from "./pages/tools/PDFReader";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +38,9 @@ const App = () => (
           <Route path="/tools/merge-pdf" element={<MergePDF />} />
           <Route path="/tools/split-pdf" element={<SplitPDF />} />
           <Route path="/tools/compress-pdf" element={<CompressPDF />} />
+          <Route path="/tools/lock-pdf" element={<LockPDF />} />
+          <Route path="/tools/word-to-pdf" element={<WordToPDF />} />
+          <Route path="/tools/pdf-reader" element={<PDFReader />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

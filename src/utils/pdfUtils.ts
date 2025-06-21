@@ -1,3 +1,4 @@
+
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
@@ -197,36 +198,27 @@ export class PDFUtils {
   }
 
   static async compressPDF(file: File, compressionLevel: 'low' | 'medium' | 'high' = 'medium'): Promise<Uint8Array> {
-    const arrayBuffer = await this.fileToArrayBuffer(file);
-    const pdf = await PDFDocument.load(arrayBuffer);
-    
-    // Get compression settings based on level
-    const compressionSettings = {
-      low: { imageQuality: 0.9, removeMetadata: false },
-      medium: { imageQuality: 0.7, removeMetadata: true },
-      high: { imageQuality: 0.5, removeMetadata: true }
-    };
-    
-    const settings = compressionSettings[compressionLevel];
-    
-    // Remove metadata for better compression
-    if (settings.removeMetadata) {
-      pdf.setTitle('');
-      pdf.setAuthor('');
-      pdf.setSubject('');
-      pdf.setKeywords([]);
-      pdf.setProducer('');
-      pdf.setCreator('');
-      pdf.setCreationDate(undefined);
-      pdf.setModificationDate(undefined);
+    try {
+      console.log('Starting PDF compression with level:', compressionLevel);
+      const arrayBuffer = await this.fileToArrayBuffer(file);
+      const pdf = await PDFDocument.load(arrayBuffer);
+      
+      console.log('PDF loaded successfully, page count:', pdf.getPageCount());
+      
+      // Simple compression approach - just re-save the PDF with optimized settings
+      // This will remove unused objects and optimize the file structure
+      const compressedPdf = await pdf.save({
+        useObjectStreams: true,
+        addDefaultPage: false,
+        objectsPerTick: compressionLevel === 'high' ? 50 : compressionLevel === 'medium' ? 100 : 200
+      });
+      
+      console.log('PDF compression completed successfully');
+      return compressedPdf;
+    } catch (error) {
+      console.error('PDF compression error:', error);
+      throw new Error(`Failed to compress PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    
-    // Basic compression by optimizing the PDF structure
-    return await pdf.save({
-      useObjectStreams: true,
-      addDefaultPage: false,
-      objectsPerTick: 50
-    });
   }
 
   static async getPageCount(file: File): Promise<number> {

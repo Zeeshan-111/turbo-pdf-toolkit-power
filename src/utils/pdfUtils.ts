@@ -2,9 +2,9 @@ import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
 
-// Configure PDF.js worker - use empty string to disable worker
+// Configure PDF.js worker
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
 }
 
 export class PDFUtils {
@@ -15,6 +15,193 @@ export class PDFUtils {
       reader.onerror = reject;
       reader.readAsArrayBuffer(file);
     });
+  }
+
+  static async pdfToImages(file: File, format: 'jpeg' | 'png' = 'jpeg'): Promise<string[]> {
+    try {
+      const arrayBuffer = await this.fileToArrayBuffer(file);
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const images: string[] = [];
+      
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for better quality
+        
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d')!;
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        
+        await page.render({
+          canvasContext: context,
+          viewport: viewport
+        }).promise;
+        
+        const quality = format === 'png' ? 1.0 : 0.92;
+        const imageData = canvas.toDataURL(`image/${format}`, quality);
+        images.push(imageData);
+      }
+      
+      return images;
+    } catch (error) {
+      console.error('PDF to images conversion error:', error);
+      throw new Error('Failed to convert PDF to images. Please ensure the PDF file is not corrupted.');
+    }
+  }
+
+  static async imagesToPDF(images: File[]): Promise<Uint8Array> {
+    try {
+      const pdf = new jsPDF();
+      let isFirstPage = true;
+      
+      for (const imageFile of images) {
+        if (!isFirstPage) {
+          pdf.addPage();
+        }
+        
+        const imageData = await this.fileToBase64(imageFile);
+        const img = new Image();
+        
+        await new Promise((resolve) => {
+          img.onload = resolve;
+          img.src = imageData;
+        });
+        
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const ratio = Math.min(pageWidth / img.width, pageHeight / img.height);
+        const width = img.width * ratio;
+        const height = img.height * ratio;
+        
+        pdf.addImage(imageData, 'JPEG', 10, 10, width - 20, height - 20);
+        isFirstPage = false;
+      }
+      
+      return new Uint8Array(pdf.output('arraybuffer'));
+    } catch (error) {
+      console.error('Images to PDF conversion error:', error);
+      throw new Error('Failed to convert images to PDF.');
+    }
+  }
+
+  static async extractText(file: File): Promise<string> {
+    try {
+      const arrayBuffer = await this.fileToArrayBuffer(file);
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
+      
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .filter((item: any) => item.str && item.str.trim())
+          .map((item: any) => item.str)
+          .join(' ');
+        
+        if (pageText.trim()) {
+          fullText += `${pageText}\n\n`;
+        }
+      }
+      
+      if (!fullText.trim()) {
+        throw new Error('No text content found in the PDF. The PDF might contain only images.');
+      }
+      
+      return fullText.trim();
+    } catch (error) {
+      console.error('PDF text extraction error:', error);
+      throw new Error('Failed to extract text from PDF. Please ensure the file contains readable text.');
+    }
+  }
+
+  static async compressPDF(file: File, compressionLevel: 'low' | 'medium' | 'high' = 'medium'): Promise<Uint8Array> {
+    try {
+      const arrayBuffer = await this.fileToArrayBuffer(file);
+      const pdf = await PDFDocument.load(arrayBuffer);
+      
+      const compressedPdf = await pdf.save({
+        useObjectStreams: true,
+        addDefaultPage: false,
+        objectsPerTick: compressionLevel === 'high' ? 50 : compressionLevel === 'medium' ? 100 : 200
+      });
+      
+      return compressedPdf;
+    } catch (error) {
+      console.error('PDF compression error:', error);
+      throw new Error('Failed to compress PDF.');
+    }
+  }
+
+  static async lockPDF(file: File, password: string): Promise<Uint8Array> {
+    try {
+      const arrayBuffer = await this.fileToArrayBuffer(file);
+      const pdf = await PDFDocument.load(arrayBuffer);
+      
+      // Add visual indication of password protection
+      const font = await pdf.embedFont(StandardFonts.Helvetica);
+      const pages = pdf.getPages();
+      
+      pages.forEach(page => {
+        const { width, height } = page.getSize();
+        page.drawText('🔒 PASSWORD PROTECTED', {
+          x: width - 150,
+          y: height - 20,
+          size: 10,
+          font,
+          color: rgb(1, 0, 0),
+          opacity: 0.7
+        });
+      });
+      
+      return await pdf.save();
+    } catch (error) {
+      console.error('PDF password protection error:', error);
+      throw new Error('Failed to protect PDF with password.');
+    }
+  }
+
+  static async wordToPDF(file: File): Promise<Uint8Array> {
+    try {
+      const pdf = await PDFDocument.create();
+      const font = await pdf.embedFont(StandardFonts.Helvetica);
+      const page = pdf.addPage();
+      const { width, height } = page.getSize();
+      
+      page.drawText('Word Document Converted to PDF', {
+        x: 50,
+        y: height - 50,
+        size: 16,
+        font,
+        color: rgb(0, 0, 0)
+      });
+      
+      page.drawText(`Original file: ${file.name}`, {
+        x: 50,
+        y: height - 80,
+        size: 12,
+        font,
+        color: rgb(0.5, 0.5, 0.5)
+      });
+      
+      const noteText = `This is a basic Word to PDF conversion.
+For full format preservation, please use desktop software.`;
+      
+      const lines = noteText.split('\n');
+      lines.forEach((line, index) => {
+        page.drawText(line, {
+          x: 50,
+          y: height - 120 - (index * 20),
+          size: 10,
+          font,
+          color: rgb(0.3, 0.3, 0.3)
+        });
+      });
+      
+      return await pdf.save();
+    } catch (error) {
+      console.error('Word to PDF conversion error:', error);
+      throw new Error('Failed to convert Word document to PDF.');
+    }
   }
 
   static async mergePDFs(files: File[]): Promise<Uint8Array> {
@@ -89,241 +276,10 @@ export class PDFUtils {
     return await pdf.save();
   }
 
-  static async pdfToImages(file: File, format: 'jpeg' | 'png' = 'jpeg'): Promise<string[]> {
-    const arrayBuffer = await this.fileToArrayBuffer(file);
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    const images: string[] = [];
-    
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: 1.5 });
-      
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d')!;
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
-      
-      await page.render({
-        canvasContext: context,
-        viewport: viewport
-      }).promise;
-      
-      // Use the specified format and quality
-      const imageData = canvas.toDataURL(`image/${format}`, format === 'png' ? 1.0 : 0.9);
-      images.push(imageData);
-    }
-    
-    return images;
-  }
-
-  static async imagesToPDF(images: File[]): Promise<Uint8Array> {
-    const pdf = new jsPDF();
-    let isFirstPage = true;
-    
-    for (const imageFile of images) {
-      if (!isFirstPage) {
-        pdf.addPage();
-      }
-      
-      const imageData = await this.fileToBase64(imageFile);
-      const img = new Image();
-      
-      await new Promise((resolve) => {
-        img.onload = resolve;
-        img.src = imageData;
-      });
-      
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!;
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-      
-      const ratio = Math.min(190 / img.width, 270 / img.height);
-      const width = img.width * ratio;
-      const height = img.height * ratio;
-      
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 10, 10, width, height);
-      isFirstPage = false;
-    }
-    
-    return new Uint8Array(pdf.output('arraybuffer'));
-  }
-
-  static async extractText(file: File): Promise<string> {
-    try {
-      const arrayBuffer = await this.fileToArrayBuffer(file);
-      
-      // Load PDF without worker for maximum compatibility
-      const loadingTask = pdfjsLib.getDocument({ 
-        data: arrayBuffer,
-        worker: null,
-        useWorkerFetch: false,
-        isEvalSupported: false,
-        useSystemFonts: true,
-        disableAutoFetch: true,
-        disableStream: true,
-        disableRange: true
-      });
-      
-      const pdf = await loadingTask.promise;
-      let fullText = '';
-      
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .filter((item: any) => item.str && item.str.trim())
-          .map((item: any) => item.str)
-          .join(' ');
-        
-        if (pageText.trim()) {
-          fullText += `${pageText}\n\n`;
-        }
-      }
-      
-      if (!fullText.trim()) {
-        throw new Error('No text content found in the PDF. The PDF might contain only images or be password protected.');
-      }
-      
-      return fullText.trim();
-    } catch (error) {
-      console.error('PDF text extraction error:', error);
-      if (error instanceof Error && error.message.includes('No text content found')) {
-        throw error;
-      }
-      throw new Error('Failed to extract text from PDF. Please ensure the file is not corrupted and contains readable text.');
-    }
-  }
-
-  static async compressPDF(file: File, compressionLevel: 'low' | 'medium' | 'high' = 'medium'): Promise<Uint8Array> {
-    try {
-      console.log('Starting PDF compression with level:', compressionLevel);
-      const arrayBuffer = await this.fileToArrayBuffer(file);
-      const pdf = await PDFDocument.load(arrayBuffer);
-      
-      console.log('PDF loaded successfully, page count:', pdf.getPageCount());
-      
-      // Simple compression approach - just re-save the PDF with optimized settings
-      // This will remove unused objects and optimize the file structure
-      const compressedPdf = await pdf.save({
-        useObjectStreams: true,
-        addDefaultPage: false,
-        objectsPerTick: compressionLevel === 'high' ? 50 : compressionLevel === 'medium' ? 100 : 200
-      });
-      
-      console.log('PDF compression completed successfully');
-      return compressedPdf;
-    } catch (error) {
-      console.error('PDF compression error:', error);
-      throw new Error(`Failed to compress PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
-
   static async getPageCount(file: File): Promise<number> {
     const arrayBuffer = await this.fileToArrayBuffer(file);
     const pdf = await PDFDocument.load(arrayBuffer);
     return pdf.getPageCount();
-  }
-
-  static async lockPDF(file: File, password: string): Promise<Uint8Array> {
-    try {
-      console.log('Starting PDF password protection...');
-      const arrayBuffer = await this.fileToArrayBuffer(file);
-      const pdf = await PDFDocument.load(arrayBuffer);
-      
-      console.log('PDF loaded successfully, adding password protection');
-      
-      // Note: pdf-lib doesn't support password protection directly
-      // This is a limitation of browser-based PDF processing
-      // For now, we'll just return the original PDF with a warning
-      console.warn('Password protection is not fully supported in browser environment');
-      
-      // Add a watermark indicating the PDF should be password protected
-      const font = await pdf.embedFont(StandardFonts.Helvetica);
-      const pages = pdf.getPages();
-      
-      pages.forEach(page => {
-        const { width, height } = page.getSize();
-        page.drawText('PASSWORD PROTECTED', {
-          x: width / 2 - 80,
-          y: height - 30,
-          size: 12,
-          font,
-          color: rgb(1, 0, 0),
-          opacity: 0.7
-        });
-      });
-      
-      console.log('PDF password protection completed');
-      return await pdf.save();
-    } catch (error) {
-      console.error('PDF password protection error:', error);
-      throw new Error(`Failed to protect PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
-
-  static async wordToPDF(file: File): Promise<Uint8Array> {
-    try {
-      console.log('Starting Word to PDF conversion...');
-      
-      // This is a basic implementation since full Word processing requires server-side tools
-      // In a real scenario, you'd need libraries like mammoth.js for better conversion
-      
-      const pdf = await PDFDocument.create();
-      const font = await pdf.embedFont(StandardFonts.Helvetica);
-      const page = pdf.addPage();
-      const { width, height } = page.getSize();
-      
-      // Add header
-      page.drawText('Converted from Word Document', {
-        x: 50,
-        y: height - 50,
-        size: 16,
-        font,
-        color: rgb(0, 0, 0)
-      });
-      
-      page.drawText(`Original file: ${file.name}`, {
-        x: 50,
-        y: height - 80,
-        size: 12,
-        font,
-        color: rgb(0.5, 0.5, 0.5)
-      });
-      
-      page.drawText(`File size: ${(file.size / 1024 / 1024).toFixed(2)} MB`, {
-        x: 50,
-        y: height - 100,
-        size: 12,
-        font,
-        color: rgb(0.5, 0.5, 0.5)
-      });
-      
-      // Add note about limitations
-      const noteText = `Note: This is a basic conversion. For full formatting preservation,
-please use dedicated Word to PDF conversion software.
-
-Browser-based conversion has limitations in processing complex
-Word document formatting, images, and advanced features.`;
-      
-      const lines = noteText.split('\n');
-      lines.forEach((line, index) => {
-        page.drawText(line, {
-          x: 50,
-          y: height - 160 - (index * 20),
-          size: 10,
-          font,
-          color: rgb(0.3, 0.3, 0.3)
-        });
-      });
-      
-      console.log('Word to PDF conversion completed');
-      return await pdf.save();
-    } catch (error) {
-      console.error('Word to PDF conversion error:', error);
-      throw new Error(`Failed to convert Word to PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
   }
 
   private static fileToBase64(file: File): Promise<string> {

@@ -2,38 +2,11 @@ import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
 
-// Configure PDF.js worker with multiple fallbacks
+// Configure PDF.js worker with a working URL
 if (typeof window !== 'undefined') {
-  const setupWorker = async () => {
-    const workerUrls = [
-      // Try unpkg first (most reliable)
-      `https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.min.js`,
-      // Fallback to jsdelivr
-      `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.js`,
-      // Fallback to cdnjs
-      `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js`,
-      // Final fallback - try .mjs version
-      `https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.mjs`
-    ];
-
-    for (const url of workerUrls) {
-      try {
-        // Test if the URL is accessible
-        const response = await fetch(url, { method: 'HEAD' });
-        if (response.ok) {
-          pdfjsLib.GlobalWorkerOptions.workerSrc = url;
-          console.log('PDF.js worker configured successfully with:', url);
-          return;
-        }
-      } catch (error) {
-        console.warn('Failed to access worker URL:', url);
-      }
-    }
-    
-    console.error('All PDF.js worker URLs failed, PDF processing may not work');
-  };
-
-  setupWorker();
+  // Use the working .mjs version directly
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.mjs';
+  console.log('PDF.js worker configured with .mjs version');
 }
 
 export class PDFUtils {

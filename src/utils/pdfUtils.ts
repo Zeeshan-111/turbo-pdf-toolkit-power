@@ -1,23 +1,39 @@
-
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
 
-// Configure PDF.js worker with matching version
+// Configure PDF.js worker with multiple fallbacks
 if (typeof window !== 'undefined') {
-  try {
-    // Use the matching PDF.js version 4.4.168
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.js`;
-    console.log('PDF.js worker configured successfully with version 4.4.168');
-  } catch (error) {
-    console.warn('Failed to set PDF.js worker:', error);
-    // Fallback to cdnjs
-    try {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js`;
-    } catch (fallbackError) {
-      console.error('Failed to set fallback PDF.js worker:', fallbackError);
+  const setupWorker = async () => {
+    const workerUrls = [
+      // Try unpkg first (most reliable)
+      `https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.min.js`,
+      // Fallback to jsdelivr
+      `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.js`,
+      // Fallback to cdnjs
+      `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js`,
+      // Final fallback - try .mjs version
+      `https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.mjs`
+    ];
+
+    for (const url of workerUrls) {
+      try {
+        // Test if the URL is accessible
+        const response = await fetch(url, { method: 'HEAD' });
+        if (response.ok) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = url;
+          console.log('PDF.js worker configured successfully with:', url);
+          return;
+        }
+      } catch (error) {
+        console.warn('Failed to access worker URL:', url);
+      }
     }
-  }
+    
+    console.error('All PDF.js worker URLs failed, PDF processing may not work');
+  };
+
+  setupWorker();
 }
 
 export class PDFUtils {

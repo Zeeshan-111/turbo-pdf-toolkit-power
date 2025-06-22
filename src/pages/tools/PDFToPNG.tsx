@@ -48,29 +48,18 @@ const PDFToPNG = () => {
   const handleConvert = async () => {
     if (!file) return;
 
-    setIsConverting(true);
+    setIs Convertingrue);
     setProgress(0);
     setError(null);
 
     try {
-      // Start progress
-      setProgress(10);
       console.log('Starting PDF to PNG conversion for:', file.name);
-
+      
       // Simulate progress updates
-      const progressInterval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 80) {
-            clearInterval(progressInterval);
-            return 80;
-          }
-          return prev + 15;
-        });
-      }, 500);
-
+      setProgress(20);
+      
       const convertedImages = await PDFUtils.pdfToImages(file, 'png');
       
-      clearInterval(progressInterval);
       setProgress(100);
       setImages(convertedImages);
       
@@ -80,8 +69,9 @@ const PDFToPNG = () => {
       });
     } catch (error) {
       console.error('Conversion failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      const errorMessage = error instanceof Error ? error.message : 'Failed to convert PDF to PNG';
       setError(errorMessage);
+      setProgress(0);
       toast({
         title: "Conversion failed",
         description: errorMessage,
@@ -100,6 +90,11 @@ const PDFToPNG = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      toast({
+        title: "Download started",
+        description: `Page ${index + 1} PNG is downloading.`,
+      });
     } catch (error) {
       toast({
         title: "Download failed",
@@ -110,13 +105,15 @@ const PDFToPNG = () => {
   };
 
   const downloadAllImages = () => {
+    if (images.length === 0) return;
+    
     images.forEach((imageData, index) => {
-      setTimeout(() => downloadImage(imageData, index), index * 200);
+      setTimeout(() => downloadImage(imageData, index), index * 300);
     });
     
     toast({
       title: "Download started",
-      description: "All images are being downloaded.",
+      description: `All ${images.length} PNG images are being downloaded.`,
     });
   };
 
@@ -194,7 +191,7 @@ const PDFToPNG = () => {
                 <div className="space-y-4">
                   <div className="flex items-center justify-center space-x-2">
                     <Loader2 className="w-6 h-6 animate-spin text-green-400" />
-                    <span className="text-lg">Converting your PDF...</span>
+                    <span className="text-lg">Converting your PDF to PNG...</span>
                   </div>
                   <div className="max-w-md mx-auto">
                     <Progress value={progress} className="h-3" />

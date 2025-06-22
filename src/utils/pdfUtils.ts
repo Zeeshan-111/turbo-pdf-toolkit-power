@@ -5,7 +5,7 @@ import jsPDF from 'jspdf';
 // Configure PDF.js worker with better error handling
 if (typeof window !== 'undefined') {
   try {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js`;
   } catch (error) {
     console.warn('Failed to set PDF.js worker:', error);
   }
@@ -24,12 +24,23 @@ export class PDFUtils {
   static async pdfToImages(file: File, format: 'jpeg' | 'png' = 'jpeg'): Promise<string[]> {
     try {
       console.log('Starting PDF to images conversion:', file.name, format);
+      
+      // Validate file
+      if (!file || file.type !== 'application/pdf') {
+        throw new Error('Invalid PDF file');
+      }
+
       const arrayBuffer = await this.fileToArrayBuffer(file);
       console.log('File loaded as ArrayBuffer, size:', arrayBuffer.byteLength);
       
+      // Load PDF with better configuration
       const loadingTask = pdfjsLib.getDocument({ 
         data: arrayBuffer,
-        verbosity: 0 // Reduce console noise
+        verbosity: 0,
+        useSystemFonts: true,
+        disableFontFace: false,
+        cMapUrl: '//cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/cmaps/',
+        cMapPacked: true
       });
       
       const pdf = await loadingTask.promise;
@@ -41,10 +52,16 @@ export class PDFUtils {
         try {
           console.log(`Processing page ${i}/${pdf.numPages}`);
           const page = await pdf.getPage(i);
-          const viewport = page.getViewport({ scale: 2.0 });
+          
+          // Use higher scale for better quality
+          const scale = format === 'png' ? 2.5 : 2.0;
+          const viewport = page.getViewport({ scale });
           
           const canvas = document.createElement('canvas');
-          const context = canvas.getContext('2d');
+          const context = canvas.getContext('2d', { 
+            alpha: format === 'png',
+            willReadFrequently: false 
+          });
           
           if (!context) {
             throw new Error('Failed to get canvas context');
@@ -53,32 +70,66 @@ export class PDFUtils {
           canvas.height = viewport.height;
           canvas.width = viewport.width;
           
+          // Clear canvas with white background for JPEG
+          if (format === 'jpeg') {
+            context.fillStyle = '#FFFFFF';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+          }
+          
           const renderContext = {
             canvasContext: context,
-            viewport: viewport
+            viewport: viewport,
+            background: format === 'jpeg' ? 'white' : 'transparent'
           };
           
           await page.render(renderContext).promise;
           
-          const quality = format === 'png' ? 1.0 : 0.92;
+          // Convert to data URL with appropriate quality
+          const quality = format === 'jpeg' ? 0.95 : 1.0;
           const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';
           const imageData = canvas.toDataURL(mimeType, quality);
+          
+          if (!imageData || imageData === 'data:,') {
+            throw new Error(`Failed to generate ${format.toUpperCase()} for page ${i}`);
+          }
+          
           images.push(imageData);
-          console.log(`Page ${i} converted successfully`);
+          console.log(`Page ${i} converted successfully to ${format.toUpperCase()}`);
+          
+          // Clean up canvas
+          canvas.width = 0;
+          canvas.height = 0;
+          
         } catch (pageError) {
           console.error(`Error processing page ${i}:`, pageError);
           throw new Error(`Failed to process page ${i}: ${pageError instanceof Error ? pageError.message : 'Unknown error'}`);
         }
       }
       
-      console.log('All pages converted successfully:', images.length);
+      if (images.length === 0) {
+        throw new Error('No images were generated from the PDF');
+      }
+      
+      console.log(`All pages converted successfully to ${format.toUpperCase()}:`, images.length);
       return images;
+      
     } catch (error) {
       console.error('PDF to images conversion error:', error);
+      
+      // Provide more specific error messages
       if (error instanceof Error) {
-        throw new Error(`Failed to convert PDF to images: ${error.message}`);
+        if (error.message.includes('Invalid PDF')) {
+          throw new Error('The uploaded file is not a valid PDF document.');
+        } else if (error.message.includes('password')) {
+          throw new Error('This PDF is password protected. Please unlock it first.');
+        } else if (error.message.includes('corrupted')) {
+          throw new Error('The PDF file appears to be corrupted. Please try with a different file.');
+        } else {
+          throw new Error(`Conversion failed: ${error.message}`);
+        }
       }
-      throw new Error('Failed to convert PDF to images. Please ensure the PDF file is not corrupted.');
+      
+      throw new Error('Failed to convert PDF. Please ensure the file is a valid PDF document.');
     }
   }
 

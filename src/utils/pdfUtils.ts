@@ -1,18 +1,19 @@
+
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
 
-// Configure PDF.js worker with correct URL and fallback
+// Configure PDF.js worker with matching version
 if (typeof window !== 'undefined') {
   try {
-    // Use the correct PDF.js version and CDN URL
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.mjs`;
-    console.log('PDF.js worker configured successfully');
+    // Use the matching PDF.js version 4.4.168
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.js`;
+    console.log('PDF.js worker configured successfully with version 4.4.168');
   } catch (error) {
     console.warn('Failed to set PDF.js worker:', error);
-    // Fallback to jsdelivr CDN
+    // Fallback to cdnjs
     try {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.mjs`;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js`;
     } catch (fallbackError) {
       console.error('Failed to set fallback PDF.js worker:', fallbackError);
     }

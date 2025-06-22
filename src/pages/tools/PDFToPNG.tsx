@@ -48,7 +48,7 @@ const PDFToPNG = () => {
   const handleConvert = async () => {
     if (!file) return;
 
-    setIs Convertingrue);
+    setIsConverting(true);
     setProgress(0);
     setError(null);
 

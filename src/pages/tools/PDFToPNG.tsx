@@ -55,11 +55,20 @@ const PDFToPNG = () => {
     try {
       console.log('Starting PDF to PNG conversion for:', file.name);
       
-      // Simulate progress updates
-      setProgress(20);
+      // Progressive progress updates
+      const progressInterval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 80) {
+            clearInterval(progressInterval);
+            return 80;
+          }
+          return prev + 15;
+        });
+      }, 500);
       
       const convertedImages = await PDFUtils.pdfToImages(file, 'png');
       
+      clearInterval(progressInterval);
       setProgress(100);
       setImages(convertedImages);
       

@@ -2,12 +2,20 @@ import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
 
-// Configure PDF.js worker with better error handling
+// Configure PDF.js worker with correct URL and fallback
 if (typeof window !== 'undefined') {
   try {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js`;
+    // Use the correct PDF.js version and CDN URL
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.mjs`;
+    console.log('PDF.js worker configured successfully');
   } catch (error) {
     console.warn('Failed to set PDF.js worker:', error);
+    // Fallback to jsdelivr CDN
+    try {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.mjs`;
+    } catch (fallbackError) {
+      console.error('Failed to set fallback PDF.js worker:', fallbackError);
+    }
   }
 }
 
@@ -33,14 +41,20 @@ export class PDFUtils {
       const arrayBuffer = await this.fileToArrayBuffer(file);
       console.log('File loaded as ArrayBuffer, size:', arrayBuffer.byteLength);
       
-      // Load PDF with better configuration
+      // Enhanced PDF loading configuration with better error handling
       const loadingTask = pdfjsLib.getDocument({ 
         data: arrayBuffer,
         verbosity: 0,
         useSystemFonts: true,
         disableFontFace: false,
-        cMapUrl: '//cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/cmaps/',
-        cMapPacked: true
+        // Use correct cMap configuration
+        cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/cmaps/',
+        cMapPacked: true,
+        // Add worker options
+        useWorkerFetch: false,
+        isEvalSupported: false,
+        disableAutoFetch: false,
+        disableStream: false
       });
       
       const pdf = await loadingTask.promise;
@@ -100,11 +114,17 @@ export class PDFUtils {
           canvas.width = 0;
           canvas.height = 0;
           
+          // Clean up page object
+          page.cleanup();
+          
         } catch (pageError) {
           console.error(`Error processing page ${i}:`, pageError);
           throw new Error(`Failed to process page ${i}: ${pageError instanceof Error ? pageError.message : 'Unknown error'}`);
         }
       }
+      
+      // Clean up PDF document
+      pdf.destroy();
       
       if (images.length === 0) {
         throw new Error('No images were generated from the PDF');
@@ -124,6 +144,8 @@ export class PDFUtils {
           throw new Error('This PDF is password protected. Please unlock it first.');
         } else if (error.message.includes('corrupted')) {
           throw new Error('The PDF file appears to be corrupted. Please try with a different file.');
+        } else if (error.message.includes('worker') || error.message.includes('fetch')) {
+          throw new Error('PDF processing service is temporarily unavailable. Please try again in a moment.');
         } else {
           throw new Error(`Conversion failed: ${error.message}`);
         }

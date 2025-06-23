@@ -57,6 +57,19 @@ const CompressPDF = () => {
     }
   };
 
+  const mapCompressionMode = (mode: CompressionMode): 'low' | 'medium' | 'high' => {
+    switch (mode) {
+      case 'basic':
+        return 'medium';
+      case 'strong':
+        return 'high';
+      case 'high-quality':
+        return 'low';
+      default:
+        return 'medium';
+    }
+  };
+
   const handleCompress = async () => {
     if (files.length === 0) return;
 
@@ -69,7 +82,7 @@ const CompressPDF = () => {
         const file = files[i];
         console.log(`Compressing file ${i + 1}/${files.length}: ${file.name}`);
 
-        const compressedPdf = await PDFUtils.compressPDF(file, compressionMode);
+        const compressedPdf = await PDFUtils.compressPDF(file, mapCompressionMode(compressionMode));
         
         results.push({
           originalFile: file,

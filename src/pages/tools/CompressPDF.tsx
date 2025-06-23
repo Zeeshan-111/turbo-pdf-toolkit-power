@@ -137,7 +137,7 @@ const CompressPDF = () => {
   };
 
   const totalOriginalSize = processedFiles.reduce((sum, f) => sum + f.originalSize, 0);
-  const totalCompressedSize = processe dFiles.reduce((sum, f) => sum + f.compressedSize, 0);
+  const totalCompressedSize = processedFiles.reduce((sum, f) => sum + f.compressedSize, 0);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">

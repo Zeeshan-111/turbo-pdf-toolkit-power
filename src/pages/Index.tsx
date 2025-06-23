@@ -53,6 +53,14 @@ const Index = () => {
       popular: true
     },
     {
+      id: "excel-to-pdf",
+      title: "Excel to PDF",
+      description: "Convert Excel files to PDF documents",
+      category: "conversion",
+      route: "/tools/excel-to-pdf",
+      popular: true
+    },
+    {
       id: "pdf-to-jpg",
       title: "PDF to JPG",
       description: "Convert PDF pages to high-quality JPG images",

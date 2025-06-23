@@ -1,6 +1,7 @@
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import jsPDF from 'jspdf';
+import * as XLSX from 'xlsx';
 
 // Configure PDF.js worker with a working URL
 if (typeof window !== 'undefined') {
@@ -271,6 +272,155 @@ File Details:
     } catch (error) {
       console.error('Word to PDF conversion error:', error);
       throw new Error(`Failed to convert Word document to PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  static async excelToPDF(file: File): Promise<Uint8Array> {
+    try {
+      console.log('Starting Excel to PDF conversion');
+      const arrayBuffer = await this.fileToArrayBuffer(file);
+      
+      // Read Excel file
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const pdf = await PDFDocument.create();
+      const font = await pdf.embedFont(StandardFonts.Helvetica);
+      const boldFont = await pdf.embedFont(StandardFonts.HelveticaBold);
+      
+      // Process each worksheet
+      for (const sheetName of workbook.SheetNames) {
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as string[][];
+        
+        if (jsonData.length === 0) continue;
+        
+        const page = pdf.addPage();
+        const { width, height } = page.getSize();
+        const margin = 50;
+        const usableWidth = width - 2 * margin;
+        const usableHeight = height - 2 * margin;
+        
+        // Draw sheet name as header
+        page.drawText(`Sheet: ${sheetName}`, {
+          x: margin,
+          y: height - margin,
+          size: 14,
+          font: boldFont,
+          color: rgb(0, 0, 0)
+        });
+        
+        let currentY = height - margin - 30;
+        const rowHeight = 15;
+        const cellPadding = 5;
+        
+        // Calculate column widths based on content
+        const maxCols = Math.max(...jsonData.map(row => row.length));
+        const colWidth = Math.min(120, usableWidth / maxCols);
+        
+        // Draw table data
+        for (let rowIndex = 0; rowIndex < Math.min(jsonData.length, 35); rowIndex++) {
+          const row = jsonData[rowIndex];
+          
+          if (currentY < margin + rowHeight) {
+            // Add new page if needed
+            const newPage = pdf.addPage();
+            currentY = height - margin;
+            
+            // Draw sheet name on new page
+            newPage.drawText(`Sheet: ${sheetName} (continued)`, {
+              x: margin,
+              y: height - margin,
+              size: 14,
+              font: boldFont,
+              color: rgb(0, 0, 0)
+            });
+            currentY -= 30;
+          }
+          
+          for (let colIndex = 0; colIndex < Math.min(row.length, 6); colIndex++) {
+            const cellValue = String(row[colIndex] || '');
+            const x = margin + (colIndex * colWidth);
+            
+            // Truncate long text
+            const maxLength = Math.floor(colWidth / 6);
+            const displayText = cellValue.length > maxLength 
+              ? cellValue.substring(0, maxLength - 3) + '...' 
+              : cellValue;
+            
+            // Draw cell border
+            page.drawRectangle({
+              x: x,
+              y: currentY - rowHeight,
+              width: colWidth,
+              height: rowHeight,
+              borderColor: rgb(0.7, 0.7, 0.7),
+              borderWidth: 0.5
+            });
+            
+            // Draw cell content
+            if (displayText) {
+              page.drawText(displayText, {
+                x: x + cellPadding,
+                y: currentY - rowHeight + cellPadding,
+                size: 8,
+                font: rowIndex === 0 ? boldFont : font,
+                color: rgb(0, 0, 0)
+              });
+            }
+          }
+          
+          currentY -= rowHeight;
+        }
+        
+        // Add note if data was truncated
+        if (jsonData.length > 35 || (jsonData[0] && jsonData[0].length > 6)) {
+          currentY -= 20;
+          page.drawText('Note: Large spreadsheets are truncated for PDF conversion.', {
+            x: margin,
+            y: currentY,
+            size: 8,
+            font,
+            color: rgb(0.5, 0.5, 0.5)
+          });
+        }
+      }
+      
+      // Add file info page
+      const infoPage = pdf.addPage();
+      const { width, height } = infoPage.getSize();
+      
+      infoPage.drawText('Excel to PDF Conversion', {
+        x: 50,
+        y: height - 50,
+        size: 16,
+        font: boldFont,
+        color: rgb(0, 0, 0)
+      });
+      
+      const infoText = `Original file: ${file.name}
+File size: ${(file.size / 1024 / 1024).toFixed(2)} MB
+Sheets converted: ${workbook.SheetNames.length}
+Conversion date: ${new Date().toLocaleString()}
+
+This PDF was generated from an Excel spreadsheet.
+Some formatting and features may not be preserved.`;
+      
+      const lines = infoText.split('\n');
+      lines.forEach((line, index) => {
+        infoPage.drawText(line, {
+          x: 50,
+          y: height - 90 - (index * 16),
+          size: 10,
+          font,
+          color: rgb(0.3, 0.3, 0.3)
+        });
+      });
+      
+      const pdfBytes = await pdf.save();
+      console.log('Excel to PDF conversion completed');
+      return pdfBytes;
+    } catch (error) {
+      console.error('Excel to PDF conversion error:', error);
+      throw new Error(`Failed to convert Excel to PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

@@ -16,6 +16,7 @@ import SplitPDF from "./pages/tools/SplitPDF";
 import CompressPDF from "./pages/tools/CompressPDF";
 import LockPDF from "./pages/tools/LockPDF";
 import WordToPDF from "./pages/tools/WordToPDF";
+import ExcelToPDF from "./pages/tools/ExcelToPDF";
 import PDFReader from "./pages/tools/PDFReader";
 import NotFound from "./pages/NotFound";
 
@@ -40,6 +41,7 @@ const App = () => (
           <Route path="/tools/compress-pdf" element={<CompressPDF />} />
           <Route path="/tools/lock-pdf" element={<LockPDF />} />
           <Route path="/tools/word-to-pdf" element={<WordToPDF />} />
+          <Route path="/tools/excel-to-pdf" element={<ExcelToPDF />} />
           <Route path="/tools/pdf-reader" element={<PDFReader />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

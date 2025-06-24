@@ -61,6 +61,14 @@ const Index = () => {
       popular: true
     },
     {
+      id: "jpg-compress",
+      title: "JPG Compress",
+      description: "Reduce JPG image file sizes while maintaining quality",
+      category: "utilities",
+      route: "/tools/jpg-compress",
+      popular: true
+    },
+    {
       id: "pdf-to-jpg",
       title: "PDF to JPG",
       description: "Convert PDF pages to high-quality JPG images",

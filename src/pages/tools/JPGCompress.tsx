@@ -1,40 +1,41 @@
+
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
-import { Download, Upload, Zap, Image, Settings, Eye, RotateCcw } from 'lucide-react';
-import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Download, Upload, Image, Settings, FileImage, Trash2, Eye } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 interface CompressedImage {
   id: string;
-  name: string;
+  originalFile: File;
   originalSize: number;
+  compressedBlob: Blob;
   compressedSize: number;
   compressionRatio: number;
-  originalUrl: string;
-  compressedUrl: string;
-  width: number;
-  height: number;
+  previewUrl: string;
 }
 
 const JPGCompress = () => {
   const [files, setFiles] = useState<File[]>([]);
   const [compressedImages, setCompressedImages] = useState<CompressedImage[]>([]);
-  const [isCompressing, setIsCompressing] = useState(false);
-  const [quality, setQuality] = useState([85]);
-  const [resizeEnabled, setResizeEnabled] = useState(false);
-  const [newWidth, setNewWidth] = useState(800);
-  const [newHeight, setNewHeight] = useState(600);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [quality, setQuality] = useState([80]);
   const [maintainAspectRatio, setMaintainAspectRatio] = useState(true);
-  const [stripMetadata, setStripMetadata] = useState(true);
-  const [outputFormat, setOutputFormat] = useState<'jpeg' | 'webp' | 'avif'>('jpeg');
-  const [compressionMode, setCompressionMode] = useState<'manual' | 'balanced' | 'smart'>('balanced');
+  const [removeMetadata, setRemoveMetadata] = useState(true);
+  const [outputFormat, setOutputFormat] = useState('jpeg');
+  const [maxWidth, setMaxWidth] = useState([0]);
+  const [maxHeight, setMaxHeight] = useState([0]);
+  const { toast } = useToast();
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const imageFiles = acceptedFiles.filter(file => 
@@ -43,12 +44,15 @@ const JPGCompress = () => {
     );
     
     if (imageFiles.length !== acceptedFiles.length) {
-      toast.error("Some files were skipped. Only JPG, JPEG, and PNG files are supported.");
+      toast({
+        title: "Invalid files detected",
+        description: "Only JPG and PNG images are supported",
+        variant: "destructive"
+      });
     }
     
     setFiles(prev => [...prev, ...imageFiles]);
-    toast.success(`${imageFiles.length} image(s) added for compression`);
-  }, []);
+  }, [toast]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -60,7 +64,7 @@ const JPGCompress = () => {
   });
 
   const compressImage = async (file: File): Promise<CompressedImage> => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
@@ -68,57 +72,49 @@ const JPGCompress = () => {
       img.onload = () => {
         let { width, height } = img;
         
-        // Resize if enabled
-        if (resizeEnabled) {
-          if (maintainAspectRatio) {
-            const aspectRatio = width / height;
-            if (newWidth / newHeight > aspectRatio) {
-              width = newHeight * aspectRatio;
-              height = newHeight;
-            } else {
-              width = newWidth;
-              height = newWidth / aspectRatio;
-            }
-          } else {
-            width = newWidth;
-            height = newHeight;
-          }
+        // Apply max dimensions if specified
+        if (maxWidth[0] > 0 && width > maxWidth[0]) {
+          height = (height * maxWidth[0]) / width;
+          width = maxWidth[0];
+        }
+        
+        if (maxHeight[0] > 0 && height > maxHeight[0]) {
+          width = (width * maxHeight[0]) / height;
+          height = maxHeight[0];
         }
         
         canvas.width = width;
         canvas.height = height;
         
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          
-          const qualityValue = quality[0] / 100;
-          const compressedDataUrl = canvas.toDataURL(`image/${outputFormat}`, qualityValue);
-          
-          // Calculate compressed size (approximate)
-          const compressedSize = Math.round((compressedDataUrl.length - 'data:image/jpeg;base64,'.length) * 0.75);
-          const compressionRatio = ((file.size - compressedSize) / file.size) * 100;
-          
-          const compressedImage: CompressedImage = {
-            id: Math.random().toString(36).substr(2, 9),
-            name: file.name,
-            originalSize: file.size,
-            compressedSize,
-            compressionRatio: Math.max(0, compressionRatio),
-            originalUrl: URL.createObjectURL(file),
-            compressedUrl: compressedDataUrl,
-            width: Math.round(width),
-            height: Math.round(height)
-          };
-          
-          resolve(compressedImage);
-        }
+        ctx!.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressionRatio = ((file.size - blob.size) / file.size) * 100;
+              resolve({
+                id: Math.random().toString(36).substr(2, 9),
+                originalFile: file,
+                originalSize: file.size,
+                compressedBlob: blob,
+                compressedSize: blob.size,
+                compressionRatio,
+                previewUrl: URL.createObjectURL(blob)
+              });
+            } else {
+              reject(new Error('Failed to compress image'));
+            }
+          },
+          outputFormat === 'jpeg' ? 'image/jpeg' : 'image/png',
+          quality[0] / 100
+        );
       };
+      
+      img.onerror = () => reject(new Error('Failed to load image'));
       
       const reader = new FileReader();
       reader.onload = (e) => {
-        if (e.target?.result) {
-          img.src = e.target.result as string;
-        }
+        img.src = e.target?.result as string;
       };
       reader.readAsDataURL(file);
     });
@@ -126,42 +122,66 @@ const JPGCompress = () => {
 
   const handleCompress = async () => {
     if (files.length === 0) {
-      toast.error("Please select images to compress");
+      toast({
+        title: "No files selected",
+        description: "Please select images to compress",
+        variant: "destructive"
+      });
       return;
     }
 
-    setIsCompressing(true);
-    const compressed: CompressedImage[] = [];
+    setIsProcessing(true);
+    setProgress(0);
+    setCompressedImages([]);
 
     try {
+      const compressed: CompressedImage[] = [];
+      
       for (let i = 0; i < files.length; i++) {
         const compressedImage = await compressImage(files[i]);
         compressed.push(compressedImage);
+        setProgress(((i + 1) / files.length) * 100);
       }
       
       setCompressedImages(compressed);
-      toast.success(`Successfully compressed ${compressed.length} image(s)`);
+      toast({
+        title: "Compression complete",
+        description: `Successfully compressed ${compressed.length} image(s)`
+      });
     } catch (error) {
-      toast.error("Error compressing images");
-      console.error(error);
+      toast({
+        title: "Compression failed",
+        description: "An error occurred while compressing images",
+        variant: "destructive"
+      });
     } finally {
-      setIsCompressing(false);
+      setIsProcessing(false);
     }
   };
 
-  const downloadImage = (image: CompressedImage) => {
-    const link = document.createElement('a');
-    link.href = image.compressedUrl;
-    link.download = `compressed_${image.name}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const downloadSingle = (compressedImage: CompressedImage) => {
+    const url = URL.createObjectURL(compressedImage.compressedBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `compressed_${compressedImage.originalFile.name}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const downloadAll = () => {
-    compressedImages.forEach(image => {
-      setTimeout(() => downloadImage(image), 100);
-    });
+    compressedImages.forEach(downloadSingle);
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const clearAll = () => {
+    setFiles([]);
+    setCompressedImages([]);
+    setProgress(0);
   };
 
   const formatFileSize = (bytes: number) => {
@@ -172,303 +192,287 @@ const JPGCompress = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const totalOriginalSize = compressedImages.reduce((sum, img) => sum + img.originalSize, 0);
-  const totalCompressedSize = compressedImages.reduce((sum, img) => sum + img.compressedSize, 0);
-  const totalSavings = totalOriginalSize > 0 ? ((totalOriginalSize - totalCompressedSize) / totalOriginalSize) * 100 : 0;
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Advanced JPG Compressor</h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Compress your images with AI-powered smart compression, batch processing, and advanced controls
-          </p>
-        </div>
+    <div className="min-h-screen bg-gray-900 text-white">
+      <Header />
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
+              JPG Compressor
+            </h1>
+            <p className="text-gray-300 text-lg">
+              Reduce image file sizes while maintaining quality
+            </p>
+          </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Upload Section */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="h-5 w-5" />
-                  Upload Images
-                </CardTitle>
-                <CardDescription>
-                  Drag and drop your JPG, JPEG, or PNG files here
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div
-                  {...getRootProps()}
-                  className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-                    isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                >
-                  <input {...getInputProps()} />
-                  <Image className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                  {isDragActive ? (
-                    <p className="text-blue-600">Drop the images here...</p>
-                  ) : (
-                    <div>
-                      <p className="text-gray-600 mb-2">Drop images here or click to browse</p>
-                      <p className="text-sm text-gray-400">Supports JPG, JPEG, PNG • Max 50 files</p>
+          <Tabs defaultValue="compress" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="compress">Compress Images</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="compress" className="space-y-6">
+              {/* File Upload Area */}
+              <Card className="bg-gray-800 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Upload className="w-5 h-5" />
+                    Upload Images
+                  </CardTitle>
+                  <CardDescription>
+                    Select JPG or PNG images to compress
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div
+                    {...getRootProps()}
+                    className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                      isDragActive 
+                        ? 'border-blue-400 bg-blue-400/10' 
+                        : 'border-gray-600 hover:border-gray-500'
+                    }`}
+                  >
+                    <input {...getInputProps()} />
+                    <FileImage className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    {isDragActive ? (
+                      <p className="text-blue-400">Drop the images here...</p>
+                    ) : (
+                      <div>
+                        <p className="text-gray-300 mb-2">
+                          Drag & drop images here, or click to select
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Supports JPG and PNG files
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {files.length > 0 && (
+                    <div className="mt-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold">Selected Files ({files.length})</h3>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={clearAll}
+                          className="text-red-400 border-red-400 hover:bg-red-400/10"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Clear All
+                        </Button>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                        {files.map((file, index) => (
+                          <div key={index} className="bg-gray-700 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium truncate">
+                                {file.name}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeFile(index)}
+                                className="text-red-400 hover:bg-red-400/10 p-1"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            <p className="text-xs text-gray-400">
+                              {formatFileSize(file.size)}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex gap-4">
+                        <Button
+                          onClick={handleCompress}
+                          disabled={isProcessing || files.length === 0}
+                          className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
+                        >
+                          <Image className="w-4 h-4 mr-2" />
+                          {isProcessing ? 'Compressing...' : 'Compress Images'}
+                        </Button>
+                      </div>
+
+                      {isProcessing && (
+                        <div className="mt-4">
+                          <Label className="text-sm text-gray-300 mb-2 block">
+                            Compression Progress
+                          </Label>
+                          <Progress value={progress} className="w-full" />
+                          <p className="text-sm text-gray-400 mt-1">
+                            {Math.round(progress)}% complete
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
+                </CardContent>
+              </Card>
 
-                {files.length > 0 && (
-                  <div className="mt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">
-                        Selected Files ({files.length})
-                      </span>
+              {/* Results */}
+              {compressedImages.length > 0 && (
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <Download className="w-5 h-5" />
+                        Compressed Images
+                      </CardTitle>
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setFiles([])}
+                        onClick={downloadAll}
+                        className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
                       >
-                        Clear All
+                        <Download className="w-4 h-4 mr-2" />
+                        Download All
                       </Button>
                     </div>
-                    <div className="max-h-32 overflow-y-auto space-y-1">
-                      {files.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
-                          <span className="truncate">{file.name}</span>
-                          <span className="text-gray-500">{formatFileSize(file.size)}</span>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {compressedImages.map((img) => (
+                        <div key={img.id} className="bg-gray-700 rounded-lg p-4">
+                          <div className="flex items-start gap-4">
+                            <img
+                              src={img.previewUrl}
+                              alt="Compressed preview"
+                              className="w-16 h-16 object-cover rounded"
+                            />
+                            <div className="flex-1">
+                              <h4 className="font-medium mb-2 truncate">
+                                {img.originalFile.name}
+                              </h4>
+                              <div className="space-y-1 text-sm text-gray-300">
+                                <div className="flex justify-between">
+                                  <span>Original:</span>
+                                  <span>{formatFileSize(img.originalSize)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Compressed:</span>
+                                  <span>{formatFileSize(img.compressedSize)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Saved:</span>
+                                  <Badge variant="secondary" className="text-green-400">
+                                    {img.compressionRatio.toFixed(1)}%
+                                  </Badge>
+                                </div>
+                              </div>
+                              <Button
+                                onClick={() => downloadSingle(img)}
+                                size="sm"
+                                className="mt-3 w-full"
+                                variant="outline"
+                              >
+                                <Download className="w-4 h-4 mr-2" />
+                                Download
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
 
-          {/* Settings Panel */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  Compression Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <Tabs value={compressionMode} onValueChange={(value) => setCompressionMode(value as any)}>
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="balanced">Balanced</TabsTrigger>
-                    <TabsTrigger value="manual">Manual</TabsTrigger>
-                    <TabsTrigger value="smart">Smart AI</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="manual" className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 block mb-2">
-                        Quality: {quality[0]}%
-                      </label>
-                      <Slider
-                        value={quality}
-                        onValueChange={setQuality}
-                        max={100}
-                        min={10}
-                        step={5}
-                        className="w-full"
-                      />
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="balanced">
-                    <p className="text-sm text-gray-600">Automatically balance quality and file size for optimal results.</p>
-                  </TabsContent>
-                  
-                  <TabsContent value="smart">
-                    <p className="text-sm text-gray-600">AI analyzes each image and applies the best compression for content type.</p>
-                  </TabsContent>
-                </Tabs>
-
-                <Separator />
-
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="resize" 
-                      checked={resizeEnabled} 
-                      onCheckedChange={(checked) => setResizeEnabled(checked === true)}
-                    />
-                    <label htmlFor="resize" className="text-sm font-medium text-gray-700">
-                      Resize Images
-                    </label>
-                  </div>
-
-                  {resizeEnabled && (
-                    <div className="pl-6 space-y-3">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-xs text-gray-600">Width</label>
-                          <input
-                            type="number"
-                            value={newWidth}
-                            onChange={(e) => setNewWidth(Number(e.target.value))}
-                            className="w-full px-2 py-1 text-sm border rounded"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-600">Height</label>
-                          <input
-                            type="number"
-                            value={newHeight}
-                            onChange={(e) => setNewHeight(Number(e.target.value))}
-                            className="w-full px-2 py-1 text-sm border rounded"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="aspect" 
-                          checked={maintainAspectRatio}
-                          onCheckedChange={(checked) => setMaintainAspectRatio(checked === true)}
-                        />
-                        <label htmlFor="aspect" className="text-xs text-gray-600">
-                          Lock aspect ratio
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <Separator />
-
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="metadata" 
-                      checked={stripMetadata}
-                      onCheckedChange={(checked) => setStripMetadata(checked === true)}
-                    />
-                    <label htmlFor="metadata" className="text-sm font-medium text-gray-700">
-                      Strip Metadata
-                    </label>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 block mb-2">Output Format</label>
-                    <select
-                      value={outputFormat}
-                      onChange={(e) => setOutputFormat(e.target.value as any)}
-                      className="w-full px-3 py-2 border rounded-md text-sm"
-                    >
-                      <option value="jpeg">JPEG</option>
-                      <option value="webp">WebP</option>
-                      <option value="avif">AVIF</option>
-                    </select>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={handleCompress}
-                  disabled={files.length === 0 || isCompressing}
-                  className="w-full"
-                  size="lg"
-                >
-                  {isCompressing ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                      Compressing...
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="h-4 w-4 mr-2" />
-                      Compress Images
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Results Section */}
-        {compressedImages.length > 0 && (
-          <Card className="mt-6">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
+            <TabsContent value="settings" className="space-y-6">
+              <Card className="bg-gray-800 border-gray-700">
+                <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Eye className="h-5 w-5" />
-                    Compression Results
+                    <Settings className="w-5 h-5" />
+                    Compression Settings
                   </CardTitle>
-                  <CardDescription>
-                    Total savings: {formatFileSize(totalOriginalSize - totalCompressedSize)} ({totalSavings.toFixed(1)}%)
-                  </CardDescription>
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={downloadAll} className="flex items-center gap-2">
-                    <Download className="h-4 w-4" />
-                    Download All
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setCompressedImages([]);
-                      setFiles([]);
-                    }}
-                  >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Reset
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {compressedImages.map((image) => (
-                  <Card key={image.id} className="overflow-hidden">
-                    <div className="aspect-video bg-gray-100 relative">
-                      <img
-                        src={image.compressedUrl}
-                        alt={image.name}
-                        className="w-full h-full object-cover"
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <Label className="text-base font-medium mb-3 block">
+                      Quality: {quality[0]}%
+                    </Label>
+                    <Slider
+                      value={quality}
+                      onValueChange={setQuality}
+                      max={100}
+                      min={10}
+                      step={5}
+                      className="w-full"
+                    />
+                    <p className="text-sm text-gray-400 mt-2">
+                      Higher quality means larger file size
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label className="text-base font-medium mb-3 block">
+                      Maximum Width (0 = no limit)
+                    </Label>
+                    <Slider
+                      value={maxWidth}
+                      onValueChange={setMaxWidth}
+                      max={4000}
+                      min={0}
+                      step={100}
+                      className="w-full"
+                    />
+                    <p className="text-sm text-gray-400 mt-1">
+                      Current: {maxWidth[0] === 0 ? 'No limit' : `${maxWidth[0]}px`}
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label className="text-base font-medium mb-3 block">
+                      Maximum Height (0 = no limit)
+                    </Label>
+                    <Slider
+                      value={maxHeight}
+                      onValueChange={setMaxHeight}
+                      max={4000}
+                      min={0}
+                      step={100}
+                      className="w-full"
+                    />
+                    <p className="text-sm text-gray-400 mt-1">
+                      Current: {maxHeight[0] === 0 ? 'No limit' : `${maxHeight[0]}px`}
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="aspect-ratio"
+                        checked={maintainAspectRatio}
+                        onCheckedChange={(checked) => setMaintainAspectRatio(checked === true)}
                       />
-                      <Badge className="absolute top-2 right-2 bg-green-500">
-                        -{image.compressionRatio.toFixed(1)}%
-                      </Badge>
+                      <Label htmlFor="aspect-ratio">
+                        Maintain aspect ratio
+                      </Label>
                     </div>
-                    <div className="p-4 space-y-2">
-                      <h4 className="font-medium text-sm truncate" title={image.name}>
-                        {image.name}
-                      </h4>
-                      <div className="text-xs text-gray-600 space-y-1">
-                        <div className="flex justify-between">
-                          <span>Original:</span>
-                          <span>{formatFileSize(image.originalSize)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Compressed:</span>
-                          <span>{formatFileSize(image.compressedSize)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Dimensions:</span>
-                          <span>{image.width} × {image.height}</span>
-                        </div>
-                      </div>
-                      <Button
-                        onClick={() => downloadImage(image)}
-                        size="sm"
-                        className="w-full"
-                      >
-                        <Download className="h-3 w-3 mr-1" />
-                        Download
-                      </Button>
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="remove-metadata"
+                        checked={removeMetadata}
+                        onCheckedChange={(checked) => setRemoveMetadata(checked === true)}
+                      />
+                      <Label htmlFor="remove-metadata">
+                        Remove metadata (EXIF data)
+                      </Label>
                     </div>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
+
+      <Footer />
     </div>
   );
 };

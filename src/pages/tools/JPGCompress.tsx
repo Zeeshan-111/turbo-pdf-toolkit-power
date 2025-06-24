@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from "@/components/ui/button";
@@ -447,7 +446,7 @@ const JPGCompress = () => {
                       <Checkbox
                         id="aspect-ratio"
                         checked={maintainAspectRatio}
-                        onCheckedChange={(checked) => setMaintainAspectRatio(checked === true)}
+                        onCheckedChange={(checked) => setMaintainAspectRatio(!!checked)}
                       />
                       <Label htmlFor="aspect-ratio">
                         Maintain aspect ratio
@@ -458,7 +457,7 @@ const JPGCompress = () => {
                       <Checkbox
                         id="remove-metadata"
                         checked={removeMetadata}
-                        onCheckedChange={(checked) => setRemoveMetadata(checked === true)}
+                        onCheckedChange={(checked) => setRemoveMetadata(!!checked)}
                       />
                       <Label htmlFor="remove-metadata">
                         Remove metadata (EXIF data)

@@ -426,21 +426,67 @@ Some formatting and features may not be preserved.`;
 
   static async compressPDF(file: File, compressionLevel: 'low' | 'medium' | 'high' = 'medium'): Promise<Uint8Array> {
     try {
-      console.log('Starting PDF compression');
+      console.log('Starting advanced PDF compression');
       const arrayBuffer = await this.fileToArrayBuffer(file);
       const pdf = await PDFDocument.load(arrayBuffer);
+      
+      // Remove unnecessary metadata for better compression
+      pdf.setTitle('');
+      pdf.setAuthor('');
+      pdf.setSubject('');
+      pdf.setCreator('PDF Compressor');
+      pdf.setProducer('PDF Compressor');
+      pdf.setCreationDate(new Date());
+      pdf.setModificationDate(new Date());
+      
+      // Get compression settings based on level
+      const settings = this.getCompressionSettings(compressionLevel);
       
       const compressedPdf = await pdf.save({
         useObjectStreams: true,
         addDefaultPage: false,
-        objectsPerTick: compressionLevel === 'high' ? 50 : compressionLevel === 'medium' ? 100 : 200
+        objectsPerTick: settings.objectsPerTick,
+        updateFieldAppearances: false
       });
       
       console.log('PDF compression completed');
+      console.log(`Original size: ${(arrayBuffer.byteLength / 1024).toFixed(2)} KB`);
+      console.log(`Compressed size: ${(compressedPdf.length / 1024).toFixed(2)} KB`);
+      console.log(`Compression ratio: ${(((arrayBuffer.byteLength - compressedPdf.length) / arrayBuffer.byteLength) * 100).toFixed(1)}%`);
+      
       return compressedPdf;
     } catch (error) {
       console.error('PDF compression error:', error);
       throw new Error(`Failed to compress PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private static getCompressionSettings(level: 'low' | 'medium' | 'high') {
+    switch (level) {
+      case 'low':
+        return {
+          objectsPerTick: 200,
+          removeMetadata: false,
+          optimizeStreams: true
+        };
+      case 'medium':
+        return {
+          objectsPerTick: 100,
+          removeMetadata: true,
+          optimizeStreams: true
+        };
+      case 'high':
+        return {
+          objectsPerTick: 50,
+          removeMetadata: true,
+          optimizeStreams: true
+        };
+      default:
+        return {
+          objectsPerTick: 100,
+          removeMetadata: true,
+          optimizeStreams: true
+        };
     }
   }
 

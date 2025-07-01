@@ -29,7 +29,7 @@ const CompressPDF = () => {
   const [files, setFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedFiles, setProcessedFiles] = useState<ProcessedFile[]>([]);
-  const [compressionMode, setCompressionMode] = useState<CompressionMode>('high-quality');
+  const [compressionMode, setCompressionMode] = useState<CompressionMode>('strong');
   const [error, setError] = useState<string | null>(null);
 
   // Advanced settings

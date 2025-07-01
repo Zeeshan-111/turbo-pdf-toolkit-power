@@ -28,7 +28,7 @@ const JPGCompress = () => {
   const [compressedImages, setCompressedImages] = useState<CompressedImage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [quality, setQuality] = useState([80]);
+  const [quality, setQuality] = useState([60]);
   const [maintainAspectRatio, setMaintainAspectRatio] = useState(true);
   const [removeMetadata, setRemoveMetadata] = useState(true);
   const [outputFormat, setOutputFormat] = useState('jpeg');
@@ -66,12 +66,12 @@ const JPGCompress = () => {
     return new Promise((resolve, reject) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      const img = new Image();
+      const img = new HTMLImageElement();
       
       img.onload = () => {
         let { width, height } = img;
         
-        // Apply max dimensions if specified
+        // Apply max dimensions if specified for better compression
         if (maxWidth[0] > 0 && width > maxWidth[0]) {
           height = (height * maxWidth[0]) / width;
           width = maxWidth[0];
@@ -82,9 +82,19 @@ const JPGCompress = () => {
           height = maxHeight[0];
         }
         
+        // If no dimensions specified, reduce size by 20% for better compression
+        if (maxWidth[0] === 0 && maxHeight[0] === 0 && (width > 1200 || height > 1200)) {
+          const scale = Math.min(1200 / width, 1200 / height);
+          width = Math.floor(width * scale);
+          height = Math.floor(height * scale);
+        }
+        
         canvas.width = width;
         canvas.height = height;
         
+        // Use better image smoothing for quality
+        ctx!.imageSmoothingEnabled = true;
+        ctx!.imageSmoothingQuality = 'high';
         ctx!.drawImage(img, 0, 0, width, height);
         
         canvas.toBlob(

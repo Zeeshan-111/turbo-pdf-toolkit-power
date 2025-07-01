@@ -66,7 +66,11 @@ const JPGCompress = () => {
     return new Promise((resolve, reject) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      const img = new HTMLImageElement();
+      if (!ctx) {
+        reject(new Error('Canvas context not available'));
+        return;
+      }
+      const img = document.createElement('img');
       
       img.onload = () => {
         let { width, height } = img;
@@ -93,9 +97,9 @@ const JPGCompress = () => {
         canvas.height = height;
         
         // Use better image smoothing for quality
-        ctx!.imageSmoothingEnabled = true;
-        ctx!.imageSmoothingQuality = 'high';
-        ctx!.drawImage(img, 0, 0, width, height);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, width, height);
         
         canvas.toBlob(
           (blob) => {
@@ -297,16 +301,31 @@ const JPGCompress = () => {
                         ))}
                       </div>
 
-                      <div className="flex gap-4">
-                        <Button
-                          onClick={handleCompress}
-                          disabled={isProcessing || files.length === 0}
-                          className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
-                        >
-                          <Image className="w-4 h-4 mr-2" />
-                          {isProcessing ? 'Compressing...' : 'Compress Images'}
-                        </Button>
-                      </div>
+                       <div className="flex gap-4">
+                         <Button
+                           onClick={handleCompress}
+                           disabled={isProcessing || files.length === 0}
+                           className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
+                         >
+                           <Image className="w-4 h-4 mr-2" />
+                           {isProcessing ? 'Compressing...' : 'Compress Images'}
+                         </Button>
+                         
+                         {compressedImages.length > 0 && (
+                           <Button
+                             onClick={() => {
+                               setFiles([]);
+                               setCompressedImages([]);
+                               setProgress(0);
+                             }}
+                             variant="outline"
+                             className="border-blue-400 text-blue-400 hover:bg-blue-400/10"
+                           >
+                             <Upload className="w-4 h-4 mr-2" />
+                             Upload New Files
+                           </Button>
+                         )}
+                       </div>
 
                       {isProcessing && (
                         <div className="mt-4">

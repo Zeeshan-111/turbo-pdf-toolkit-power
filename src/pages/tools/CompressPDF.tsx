@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
-import { Download, AlertCircle, Settings, Shield, Zap } from "lucide-react";
+import { Download, Upload, AlertCircle, Settings, Shield, Zap } from "lucide-react";
 import { PDFUtils } from "@/utils/pdfUtils";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -238,16 +238,29 @@ const CompressPDF = () => {
                       </div>
                     </div>
 
-                    {/* Download Buttons */}
-                    <div className="flex gap-4">
-                      <Button
-                        onClick={handleDownloadAll}
-                        className="flex-1 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Download All ({processedFiles.length})
-                      </Button>
-                    </div>
+                     {/* Download Buttons */}
+                     <div className="flex gap-4">
+                       <Button
+                         onClick={handleDownloadAll}
+                         className="flex-1 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
+                       >
+                         <Download className="w-4 h-4 mr-2" />
+                         Download All ({processedFiles.length})
+                       </Button>
+                       
+                       <Button
+                         onClick={() => {
+                           setFiles([]);
+                           setProcessedFiles([]);
+                           setError(null);
+                         }}
+                         variant="outline"
+                         className="border-blue-400 text-blue-400 hover:bg-blue-400/10"
+                       >
+                         <Upload className="w-4 h-4 mr-2" />
+                         Upload New Files
+                       </Button>
+                     </div>
 
                     {/* Individual Files */}
                     <div className="space-y-2">

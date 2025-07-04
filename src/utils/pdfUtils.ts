@@ -275,13 +275,29 @@ File Details:
     }
   }
 
+  // Helper function to sanitize text for PDF compatibility
+  private static sanitizeTextForPDF(text: string): string {
+    if (!text) return '';
+    
+    // Replace common problematic characters
+    return text
+      .replace(/₹/g, 'Rs.') // Replace Rupee symbol
+      .replace(/[^\x20-\x7E]/g, '') // Remove non-ASCII characters
+      .replace(/[\u0080-\uFFFF]/g, '') // Remove Unicode characters
+      .trim();
+  }
+
   static async excelToPDF(file: File): Promise<Uint8Array> {
     try {
       console.log('Starting Excel to PDF conversion');
       const arrayBuffer = await this.fileToArrayBuffer(file);
       
       // Read Excel file using XLSX
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const workbook = XLSX.read(arrayBuffer, { 
+        type: 'array',
+        cellText: true, // Convert all values to text to avoid encoding issues
+        cellDates: true
+      });
       console.log('Excel workbook loaded, sheets:', workbook.SheetNames);
       
       // Create PDF using jsPDF for better table handling
@@ -297,11 +313,12 @@ File Details:
       for (const sheetName of workbook.SheetNames) {
         const worksheet = workbook.Sheets[sheetName];
         
-        // Convert sheet to JSON array format
+        // Convert sheet to JSON array format with text conversion
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
           header: 1, 
           defval: '',
-          raw: false 
+          raw: false, // This ensures all values are converted to strings
+          dateNF: 'yyyy-mm-dd' // Standard date format
         }) as string[][];
         
         console.log(`Processing sheet "${sheetName}" with ${jsonData.length} rows`);
@@ -313,10 +330,13 @@ File Details:
           pdf.addPage();
         }
         
+        // Sanitize sheet name for PDF
+        const sanitizedSheetName = this.sanitizeTextForPDF(sheetName);
+        
         // Add sheet title
         pdf.setFontSize(16);
         pdf.setFont('helvetica', 'bold');
-        pdf.text(`Sheet: ${sheetName}`, 20, 20);
+        pdf.text(`Sheet: ${sanitizedSheetName}`, 20, 20);
         
         // Reset font for table content
         pdf.setFontSize(8);
@@ -343,7 +363,7 @@ File Details:
             // Add sheet title on new page
             pdf.setFontSize(16);
             pdf.setFont('helvetica', 'bold');
-            pdf.text(`${sheetName} (continued)`, 20, yPosition);
+            pdf.text(`${sanitizedSheetName} (continued)`, 20, yPosition);
             yPosition += 15;
             pdf.setFontSize(8);
             pdf.setFont('helvetica', 'normal');
@@ -351,7 +371,8 @@ File Details:
           
           // Draw row cells
           for (let colIndex = 0; colIndex < colsToProcess; colIndex++) {
-            const cellValue = String(row[colIndex] || '').trim();
+            const rawCellValue = row[colIndex] || '';
+            const cellValue = this.sanitizeTextForPDF(String(rawCellValue));
             const xPosition = 20 + (colIndex * cellWidth);
             
             // Draw cell border
@@ -370,7 +391,13 @@ File Details:
                 pdf.setFont('helvetica', 'bold');
               }
               
-              pdf.text(displayText, xPosition + 2, yPosition - 1);
+              try {
+                pdf.text(displayText, xPosition + 2, yPosition - 1);
+              } catch (textError) {
+                // If text still causes issues, use a placeholder
+                console.warn('Text rendering issue:', textError);
+                pdf.text('...', xPosition + 2, yPosition - 1);
+              }
               
               if (rowIndex === 0) {
                 pdf.setFont('helvetica', 'normal');
@@ -403,18 +430,24 @@ File Details:
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
       const infoLines = [
-        `Original file: ${file.name}`,
+        `Original file: ${this.sanitizeTextForPDF(file.name)}`,
         `File size: ${(file.size / 1024 / 1024).toFixed(2)} MB`,
-        `Sheets processed: ${workbook.SheetNames.join(', ')}`,
+        `Sheets processed: ${workbook.SheetNames.map(name => this.sanitizeTextForPDF(name)).join(', ')}`,
         `Conversion date: ${new Date().toLocaleString()}`,
         '',
         'This PDF was generated from an Excel spreadsheet.',
-        'Complex formatting may not be fully preserved.'
+        'Complex formatting and special characters may not be fully preserved.',
+        'Currency symbols have been converted to text equivalents.'
       ];
       
       let infoY = 50;
       infoLines.forEach(line => {
-        pdf.text(line, 20, infoY);
+        try {
+          pdf.text(line, 20, infoY);
+        } catch (textError) {
+          console.warn('Info text rendering issue:', textError);
+          pdf.text('...', 20, infoY);
+        }
         infoY += 8;
       });
       

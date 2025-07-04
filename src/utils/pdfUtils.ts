@@ -1,6 +1,6 @@
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import * as XLSX from 'xlsx';
 
 // Configure PDF.js worker with a working URL
@@ -280,144 +280,149 @@ File Details:
       console.log('Starting Excel to PDF conversion');
       const arrayBuffer = await this.fileToArrayBuffer(file);
       
-      // Read Excel file
+      // Read Excel file using XLSX
       const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-      const pdf = await PDFDocument.create();
-      const font = await pdf.embedFont(StandardFonts.Helvetica);
-      const boldFont = await pdf.embedFont(StandardFonts.HelveticaBold);
+      console.log('Excel workbook loaded, sheets:', workbook.SheetNames);
+      
+      // Create PDF using jsPDF for better table handling
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      let isFirstSheet = true;
       
       // Process each worksheet
       for (const sheetName of workbook.SheetNames) {
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' }) as string[][];
+        
+        // Convert sheet to JSON array format
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+          header: 1, 
+          defval: '',
+          raw: false 
+        }) as string[][];
+        
+        console.log(`Processing sheet "${sheetName}" with ${jsonData.length} rows`);
         
         if (jsonData.length === 0) continue;
         
-        const page = pdf.addPage();
-        const { width, height } = page.getSize();
-        const margin = 50;
-        const usableWidth = width - 2 * margin;
-        const usableHeight = height - 2 * margin;
+        // Add new page for each sheet (except first)
+        if (!isFirstSheet) {
+          pdf.addPage();
+        }
         
-        // Draw sheet name as header
-        page.drawText(`Sheet: ${sheetName}`, {
-          x: margin,
-          y: height - margin,
-          size: 14,
-          font: boldFont,
-          color: rgb(0, 0, 0)
-        });
+        // Add sheet title
+        pdf.setFontSize(16);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`Sheet: ${sheetName}`, 20, 20);
         
-        let currentY = height - margin - 30;
-        const rowHeight = 15;
-        const cellPadding = 5;
+        // Reset font for table content
+        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'normal');
         
-        // Calculate column widths based on content
-        const maxCols = Math.max(...jsonData.map(row => row.length));
-        const colWidth = Math.min(120, usableWidth / maxCols);
+        let yPosition = 35;
+        const maxRowsPerPage = 30;
+        const maxColsPerPage = 8;
+        const cellHeight = 6;
+        const cellWidth = 22;
         
-        // Draw table data
-        for (let rowIndex = 0; rowIndex < Math.min(jsonData.length, 35); rowIndex++) {
+        // Process rows (limit to prevent overflow)
+        const rowsToProcess = Math.min(jsonData.length, maxRowsPerPage);
+        
+        for (let rowIndex = 0; rowIndex < rowsToProcess; rowIndex++) {
           const row = jsonData[rowIndex];
+          const colsToProcess = Math.min(row.length, maxColsPerPage);
           
-          if (currentY < margin + rowHeight) {
-            // Add new page if needed
-            const newPage = pdf.addPage();
-            currentY = height - margin;
+          // Check if we need a new page
+          if (yPosition > 270) {
+            pdf.addPage();
+            yPosition = 20;
             
-            // Draw sheet name on new page
-            newPage.drawText(`Sheet: ${sheetName} (continued)`, {
-              x: margin,
-              y: height - margin,
-              size: 14,
-              font: boldFont,
-              color: rgb(0, 0, 0)
-            });
-            currentY -= 30;
+            // Add sheet title on new page
+            pdf.setFontSize(16);
+            pdf.setFont('helvetica', 'bold');
+            pdf.text(`${sheetName} (continued)`, 20, yPosition);
+            yPosition += 15;
+            pdf.setFontSize(8);
+            pdf.setFont('helvetica', 'normal');
           }
           
-          for (let colIndex = 0; colIndex < Math.min(row.length, 6); colIndex++) {
-            const cellValue = String(row[colIndex] || '');
-            const x = margin + (colIndex * colWidth);
-            
-            // Truncate long text
-            const maxLength = Math.floor(colWidth / 6);
-            const displayText = cellValue.length > maxLength 
-              ? cellValue.substring(0, maxLength - 3) + '...' 
-              : cellValue;
+          // Draw row cells
+          for (let colIndex = 0; colIndex < colsToProcess; colIndex++) {
+            const cellValue = String(row[colIndex] || '').trim();
+            const xPosition = 20 + (colIndex * cellWidth);
             
             // Draw cell border
-            page.drawRectangle({
-              x: x,
-              y: currentY - rowHeight,
-              width: colWidth,
-              height: rowHeight,
-              borderColor: rgb(0.7, 0.7, 0.7),
-              borderWidth: 0.5
-            });
+            pdf.rect(xPosition, yPosition - cellHeight + 2, cellWidth, cellHeight);
             
-            // Draw cell content
+            // Truncate long text to fit cell
+            const maxChars = 12;
+            const displayText = cellValue.length > maxChars 
+              ? cellValue.substring(0, maxChars - 2) + '..' 
+              : cellValue;
+            
+            // Draw cell text
             if (displayText) {
-              page.drawText(displayText, {
-                x: x + cellPadding,
-                y: currentY - rowHeight + cellPadding,
-                size: 8,
-                font: rowIndex === 0 ? boldFont : font,
-                color: rgb(0, 0, 0)
-              });
+              // Make header row bold
+              if (rowIndex === 0) {
+                pdf.setFont('helvetica', 'bold');
+              }
+              
+              pdf.text(displayText, xPosition + 2, yPosition - 1);
+              
+              if (rowIndex === 0) {
+                pdf.setFont('helvetica', 'normal');
+              }
             }
           }
           
-          currentY -= rowHeight;
+          yPosition += cellHeight;
         }
         
-        // Add note if data was truncated
-        if (jsonData.length > 35 || (jsonData[0] && jsonData[0].length > 6)) {
-          currentY -= 20;
-          page.drawText('Note: Large spreadsheets are truncated for PDF conversion.', {
-            x: margin,
-            y: currentY,
-            size: 8,
-            font,
-            color: rgb(0.5, 0.5, 0.5)
-          });
+        // Add truncation note if data was limited
+        if (jsonData.length > maxRowsPerPage || (jsonData[0] && jsonData[0].length > maxColsPerPage)) {
+          yPosition += 10;
+          pdf.setFontSize(6);
+          pdf.setTextColor(128, 128, 128);
+          pdf.text('Note: Large spreadsheets are truncated for PDF display', 20, yPosition);
+          pdf.setTextColor(0, 0, 0);
+          pdf.setFontSize(8);
         }
+        
+        isFirstSheet = false;
       }
       
-      // Add file info page
-      const infoPage = pdf.addPage();
-      const { width, height } = infoPage.getSize();
+      // Add file information page
+      pdf.addPage();
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Excel to PDF Conversion Report', 20, 30);
       
-      infoPage.drawText('Excel to PDF Conversion', {
-        x: 50,
-        y: height - 50,
-        size: 16,
-        font: boldFont,
-        color: rgb(0, 0, 0)
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      const infoLines = [
+        `Original file: ${file.name}`,
+        `File size: ${(file.size / 1024 / 1024).toFixed(2)} MB`,
+        `Sheets processed: ${workbook.SheetNames.join(', ')}`,
+        `Conversion date: ${new Date().toLocaleString()}`,
+        '',
+        'This PDF was generated from an Excel spreadsheet.',
+        'Complex formatting may not be fully preserved.'
+      ];
+      
+      let infoY = 50;
+      infoLines.forEach(line => {
+        pdf.text(line, 20, infoY);
+        infoY += 8;
       });
       
-      const infoText = `Original file: ${file.name}
-File size: ${(file.size / 1024 / 1024).toFixed(2)} MB
-Sheets converted: ${workbook.SheetNames.length}
-Conversion date: ${new Date().toLocaleString()}
-
-This PDF was generated from an Excel spreadsheet.
-Some formatting and features may not be preserved.`;
+      // Convert to Uint8Array
+      const pdfArrayBuffer = pdf.output('arraybuffer');
+      console.log('Excel to PDF conversion completed successfully');
+      return new Uint8Array(pdfArrayBuffer);
       
-      const lines = infoText.split('\n');
-      lines.forEach((line, index) => {
-        infoPage.drawText(line, {
-          x: 50,
-          y: height - 90 - (index * 16),
-          size: 10,
-          font,
-          color: rgb(0.3, 0.3, 0.3)
-        });
-      });
-      
-      const pdfBytes = await pdf.save();
-      console.log('Excel to PDF conversion completed');
-      return pdfBytes;
     } catch (error) {
       console.error('Excel to PDF conversion error:', error);
       throw new Error(`Failed to convert Excel to PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);

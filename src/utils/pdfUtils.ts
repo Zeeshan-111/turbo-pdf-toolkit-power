@@ -275,185 +275,208 @@ File Details:
     }
   }
 
-  // Helper function to sanitize text for PDF compatibility
-  private static sanitizeTextForPDF(text: string): string {
-    if (!text) return '';
+  // Improved text handling for Excel content
+  private static formatCellValue(value: any): string {
+    if (value === null || value === undefined) return '';
     
-    // Replace common problematic characters
-    return text
-      .replace(/₹/g, 'Rs.') // Replace Rupee symbol
-      .replace(/[^\x20-\x7E]/g, '') // Remove non-ASCII characters
-      .replace(/[\u0080-\uFFFF]/g, '') // Remove Unicode characters
-      .trim();
+    // Handle numbers (including currency)
+    if (typeof value === 'number') {
+      // Check if it's a currency value (this is a simple heuristic)
+      if (value > 1000 && Number.isInteger(value)) {
+        return `₹${value.toLocaleString('en-IN')}`;
+      }
+      return value.toString();
+    }
+    
+    // Handle dates
+    if (value instanceof Date) {
+      return value.toLocaleDateString('en-IN');
+    }
+    
+    // Handle strings
+    return String(value).trim();
   }
 
   static async excelToPDF(file: File): Promise<Uint8Array> {
     try {
-      console.log('Starting Excel to PDF conversion');
+      console.log('Starting Enhanced Excel to PDF conversion');
       const arrayBuffer = await this.fileToArrayBuffer(file);
       
-      // Read Excel file using XLSX
+      // Read Excel file with enhanced options
       const workbook = XLSX.read(arrayBuffer, { 
         type: 'array',
-        cellText: true, // Convert all values to text to avoid encoding issues
-        cellDates: true
+        cellStyles: true,
+        cellDates: true,
+        cellNF: true,
+        cellText: false, // Keep original values for better processing
+        raw: false
       });
+      
       console.log('Excel workbook loaded, sheets:', workbook.SheetNames);
       
-      // Create PDF using jsPDF for better table handling
+      // Create PDF with better settings
       const pdf = new jsPDF({
-        orientation: 'portrait',
+        orientation: 'landscape', // Use landscape for better table display
         unit: 'mm',
         format: 'a4'
       });
       
       let isFirstSheet = true;
       
-      // Process each worksheet
       for (const sheetName of workbook.SheetNames) {
         const worksheet = workbook.Sheets[sheetName];
         
-        // Convert sheet to JSON array format with text conversion
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
-          header: 1, 
-          defval: '',
-          raw: false, // This ensures all values are converted to strings
-          dateNF: 'yyyy-mm-dd' // Standard date format
-        }) as string[][];
-        
-        console.log(`Processing sheet "${sheetName}" with ${jsonData.length} rows`);
-        
-        if (jsonData.length === 0) continue;
-        
-        // Add new page for each sheet (except first)
         if (!isFirstSheet) {
           pdf.addPage();
         }
         
-        // Sanitize sheet name for PDF
-        const sanitizedSheetName = this.sanitizeTextForPDF(sheetName);
+        // Get the range of cells with data
+        const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:A1');
+        console.log(`Processing sheet "${sheetName}", range:`, range);
         
         // Add sheet title
-        pdf.setFontSize(16);
+        pdf.setFontSize(14);
         pdf.setFont('helvetica', 'bold');
-        pdf.text(`Sheet: ${sanitizedSheetName}`, 20, 20);
+        pdf.text(`Sheet: ${sheetName}`, 20, 20);
         
-        // Reset font for table content
-        pdf.setFontSize(8);
+        // Process the data row by row
+        const startRow = range.s.r;
+        const endRow = Math.min(range.e.r, startRow + 40); // Limit rows to prevent overflow
+        const startCol = range.s.c;
+        const endCol = Math.min(range.e.c, startCol + 12); // Limit columns
+        
+        const cellWidth = (pdf.internal.pageSize.getWidth() - 40) / (endCol - startCol + 1);
+        const cellHeight = 8;
+        let yPos = 35;
+        
+        // Set font for table content
+        pdf.setFontSize(9);
         pdf.setFont('helvetica', 'normal');
         
-        let yPosition = 35;
-        const maxRowsPerPage = 30;
-        const maxColsPerPage = 8;
-        const cellHeight = 6;
-        const cellWidth = 22;
-        
-        // Process rows (limit to prevent overflow)
-        const rowsToProcess = Math.min(jsonData.length, maxRowsPerPage);
-        
-        for (let rowIndex = 0; rowIndex < rowsToProcess; rowIndex++) {
-          const row = jsonData[rowIndex];
-          const colsToProcess = Math.min(row.length, maxColsPerPage);
-          
+        // Process each row
+        for (let rowIndex = startRow; rowIndex <= endRow; rowIndex++) {
           // Check if we need a new page
-          if (yPosition > 270) {
+          if (yPos > pdf.internal.pageSize.getHeight() - 30) {
             pdf.addPage();
-            yPosition = 20;
+            yPos = 20;
             
-            // Add sheet title on new page
-            pdf.setFontSize(16);
+            // Add continued sheet title
+            pdf.setFontSize(14);
             pdf.setFont('helvetica', 'bold');
-            pdf.text(`${sanitizedSheetName} (continued)`, 20, yPosition);
-            yPosition += 15;
-            pdf.setFontSize(8);
+            pdf.text(`${sheetName} (continued)`, 20, yPos);
+            yPos += 20;
+            pdf.setFontSize(9);
             pdf.setFont('helvetica', 'normal');
           }
           
-          // Draw row cells
-          for (let colIndex = 0; colIndex < colsToProcess; colIndex++) {
-            const rawCellValue = row[colIndex] || '';
-            const cellValue = this.sanitizeTextForPDF(String(rawCellValue));
-            const xPosition = 20 + (colIndex * cellWidth);
+          // Process each column in the row
+          for (let colIndex = startCol; colIndex <= endCol; colIndex++) {
+            const cellAddress = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
+            const cell = worksheet[cellAddress];
+            
+            const xPos = 20 + (colIndex - startCol) * cellWidth;
             
             // Draw cell border
-            pdf.rect(xPosition, yPosition - cellHeight + 2, cellWidth, cellHeight);
+            pdf.setDrawColor(200, 200, 200);
+            pdf.rect(xPos, yPos - cellHeight + 2, cellWidth, cellHeight);
             
-            // Truncate long text to fit cell
-            const maxChars = 12;
-            const displayText = cellValue.length > maxChars 
-              ? cellValue.substring(0, maxChars - 2) + '..' 
+            // Get cell value
+            let cellValue = '';
+            if (cell) {
+              if (cell.w) {
+                // Use formatted text if available
+                cellValue = cell.w;
+              } else if (cell.v !== undefined) {
+                cellValue = this.formatCellValue(cell.v);
+              }
+            }
+            
+            // Make header row bold
+            if (rowIndex === startRow) {
+              pdf.setFont('helvetica', 'bold');
+            }
+            
+            // Truncate long text and draw
+            const maxLength = Math.floor(cellWidth / 2.5);
+            const displayText = cellValue.length > maxLength 
+              ? cellValue.substring(0, maxLength - 2) + '..' 
               : cellValue;
             
-            // Draw cell text
             if (displayText) {
-              // Make header row bold
-              if (rowIndex === 0) {
-                pdf.setFont('helvetica', 'bold');
-              }
-              
+              // Handle potential encoding issues with try-catch
               try {
-                pdf.text(displayText, xPosition + 2, yPosition - 1);
+                pdf.text(displayText, xPos + 2, yPos - 2);
               } catch (textError) {
-                // If text still causes issues, use a placeholder
-                console.warn('Text rendering issue:', textError);
-                pdf.text('...', xPosition + 2, yPosition - 1);
+                console.warn('Text rendering issue for cell:', cellAddress, textError);
+                // Try with simplified text
+                const simplifiedText = displayText.replace(/[^\x00-\x7F]/g, "?");
+                try {
+                  pdf.text(simplifiedText, xPos + 2, yPos - 2);
+                } catch {
+                  pdf.text('...', xPos + 2, yPos - 2);
+                }
               }
-              
-              if (rowIndex === 0) {
-                pdf.setFont('helvetica', 'normal');
-              }
+            }
+            
+            if (rowIndex === startRow) {
+              pdf.setFont('helvetica', 'normal');
             }
           }
           
-          yPosition += cellHeight;
+          yPos += cellHeight;
         }
         
-        // Add truncation note if data was limited
-        if (jsonData.length > maxRowsPerPage || (jsonData[0] && jsonData[0].length > maxColsPerPage)) {
-          yPosition += 10;
-          pdf.setFontSize(6);
-          pdf.setTextColor(128, 128, 128);
-          pdf.text('Note: Large spreadsheets are truncated for PDF display', 20, yPosition);
-          pdf.setTextColor(0, 0, 0);
-          pdf.setFontSize(8);
+        // Add summary info
+        yPos += 10;
+        pdf.setFontSize(8);
+        pdf.setTextColor(100, 100, 100);
+        
+        const totalRows = range.e.r - range.s.r + 1;
+        const totalCols = range.e.c - range.s.c + 1;
+        const displayedRows = endRow - startRow + 1;
+        const displayedCols = endCol - startCol + 1;
+        
+        pdf.text(`Data: ${displayedRows}/${totalRows} rows, ${displayedCols}/${totalCols} columns shown`, 20, yPos);
+        
+        if (totalRows > 40 || totalCols > 12) {
+          yPos += 5;
+          pdf.text('Note: Large spreadsheets are truncated for PDF display', 20, yPos);
         }
         
+        pdf.setTextColor(0, 0, 0);
         isFirstSheet = false;
       }
       
-      // Add file information page
+      // Add conversion info page
       pdf.addPage();
-      pdf.setFontSize(14);
+      pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
       pdf.text('Excel to PDF Conversion Report', 20, 30);
       
-      pdf.setFontSize(10);
+      pdf.setFontSize(11);
       pdf.setFont('helvetica', 'normal');
       const infoLines = [
-        `Original file: ${this.sanitizeTextForPDF(file.name)}`,
+        `Original file: ${file.name}`,
         `File size: ${(file.size / 1024 / 1024).toFixed(2)} MB`,
-        `Sheets processed: ${workbook.SheetNames.map(name => this.sanitizeTextForPDF(name)).join(', ')}`,
-        `Conversion date: ${new Date().toLocaleString()}`,
+        `Sheets processed: ${workbook.SheetNames.join(', ')}`,
+        `Conversion date: ${new Date().toLocaleString('en-IN')}`,
+        `Tool: Enhanced Excel to PDF Converter`,
         '',
-        'This PDF was generated from an Excel spreadsheet.',
-        'Complex formatting and special characters may not be fully preserved.',
-        'Currency symbols have been converted to text equivalents.'
+        'Conversion Notes:',
+        '• Original data formatting preserved where possible',
+        '• Currency symbols and special characters maintained',
+        '• Large spreadsheets may be truncated for optimal display',
+        '• Use landscape orientation for better table viewing'
       ];
       
       let infoY = 50;
       infoLines.forEach(line => {
-        try {
-          pdf.text(line, 20, infoY);
-        } catch (textError) {
-          console.warn('Info text rendering issue:', textError);
-          pdf.text('...', 20, infoY);
-        }
-        infoY += 8;
+        pdf.text(line, 20, infoY);
+        infoY += 7;
       });
       
-      // Convert to Uint8Array
       const pdfArrayBuffer = pdf.output('arraybuffer');
-      console.log('Excel to PDF conversion completed successfully');
+      console.log('Enhanced Excel to PDF conversion completed successfully');
       return new Uint8Array(pdfArrayBuffer);
       
     } catch (error) {

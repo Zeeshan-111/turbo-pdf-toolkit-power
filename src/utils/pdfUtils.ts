@@ -280,22 +280,15 @@ File Details:
       console.log('Starting Professional Excel to PDF conversion');
       const arrayBuffer = await this.fileToArrayBuffer(file);
       
-      // Read Excel with comprehensive options to preserve all data types
+      // Read Excel with safe options to avoid undefined errors
       const workbook = XLSX.read(arrayBuffer, { 
         type: 'array',
-        cellStyles: true,
         cellDates: true,
-        cellNF: true,
+        cellNF: false,
         cellText: false,
         raw: false,
-        codepage: 65001, // UTF-8 support
-        cellFormula: true,
-        sheetStubs: false,
-        bookDeps: true,
-        bookFiles: true,
-        bookProps: true,
-        bookSheets: true,
-        bookVBA: false
+        codepage: 65001,
+        sheetStubs: false
       });
       
       console.log('Excel workbook loaded successfully. Sheets:', workbook.SheetNames);

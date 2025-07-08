@@ -280,22 +280,27 @@ File Details:
       console.log('Starting Professional Excel to PDF conversion');
       const arrayBuffer = await this.fileToArrayBuffer(file);
       
-      // Read Excel with safe options to avoid undefined errors
+      // Read Excel with comprehensive formatting preservation
       const workbook = XLSX.read(arrayBuffer, { 
         type: 'array',
+        cellStyles: true,
         cellDates: true,
-        cellNF: false,
+        cellNF: true,
         cellText: false,
         raw: false,
         codepage: 65001,
-        sheetStubs: false
+        sheetStubs: false,
+        bookDeps: true,
+        bookFiles: true,
+        bookProps: true,
+        bookSheets: true
       });
       
       console.log('Excel workbook loaded successfully. Sheets:', workbook.SheetNames);
       
-      // Create PDF with optimal settings
+      // Create PDF with portrait orientation like the reference
       const pdf = new jsPDF({
-        orientation: 'landscape',
+        orientation: 'portrait',
         unit: 'mm',
         format: 'a4',
         putOnlyUsedFonts: true,
@@ -313,140 +318,141 @@ File Details:
         
         console.log(`Processing sheet: "${sheetName}"`);
         
-        // Get actual data range (not empty cells)
-        const range = worksheet['!ref'] ? XLSX.utils.decode_range(worksheet['!ref']) : { s: { r: 0, c: 0 }, e: { r: 0, c: 0 } };
-        console.log(`Sheet "${sheetName}" range:`, range);
-        
-        // Convert worksheet to array of arrays for easier processing
-        const sheetData = XLSX.utils.sheet_to_json(worksheet, { 
-          header: 1, 
-          raw: false,
-          dateNF: 'dd/mm/yyyy',
-          defval: '',
-          blankrows: false
-        }) as any[][];
-        
-        console.log(`Sheet data rows: ${sheetData.length}`);
-        
-        if (sheetData.length === 0) {
+        // Get the range of data in the worksheet
+        const range = worksheet['!ref'] ? XLSX.utils.decode_range(worksheet['!ref']) : null;
+        if (!range) {
           console.log(`Skipping empty sheet: ${sheetName}`);
           continue;
         }
         
-        // Add sheet title
-        pdf.setFontSize(16);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(`${sheetName}`, 20, 20);
+        console.log(`Sheet "${sheetName}" range:`, range);
         
-        // Calculate optimal column widths based on content
-        const maxCols = Math.max(...sheetData.map(row => row.length));
-        const availableWidth = pdf.internal.pageSize.getWidth() - 40; // 20mm margins on each side
-        const baseColWidth = Math.max(availableWidth / Math.min(maxCols, 10), 15); // Minimum 15mm per column
+        // Calculate page margins and available space
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 15;
+        const availableWidth = pageWidth - (2 * margin);
+        const availableHeight = pageHeight - (2 * margin);
         
-        // Limit rows and columns for readability
-        const maxRows = 35;
-        const maxColsToShow = Math.min(maxCols, 10);
-        const dataToShow = sheetData.slice(0, maxRows);
+        let yPosition = margin + 10;
         
-        let yPosition = 35;
-        const rowHeight = 7;
-        
-        // Set table font
-        pdf.setFontSize(8);
-        pdf.setFont('helvetica', 'normal');
-        
-        // Process each row
-        dataToShow.forEach((row, rowIndex) => {
+        // Process each row from the range
+        for (let rowNum = range.s.r; rowNum <= range.e.r; rowNum++) {
           // Check for page break
-          if (yPosition > pdf.internal.pageSize.getHeight() - 25) {
+          if (yPosition > pageHeight - margin - 10) {
             pdf.addPage();
-            yPosition = 20;
+            yPosition = margin + 10;
+          }
+          
+          const rowHeight = 6;
+          const numCols = range.e.c - range.s.c + 1;
+          const colWidth = availableWidth / numCols;
+          
+          // Determine if this is a header row (first row or if contains bold formatting)
+          const isHeaderRow = rowNum === range.s.r;
+          
+          // Draw row background for header
+          if (isHeaderRow) {
+            pdf.setFillColor(245, 245, 245);
+            pdf.rect(margin, yPosition - rowHeight + 1, availableWidth, rowHeight, 'F');
+          }
+          
+          // Process each column in the row
+          for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
+            const cellAddress = XLSX.utils.encode_cell({ r: rowNum, c: colNum });
+            const cell = worksheet[cellAddress];
             
-            // Repeat sheet title on new page
-            pdf.setFontSize(14);
-            pdf.setFont('helvetica', 'bold');
-            pdf.text(`${sheetName} (continued)`, 20, yPosition);
-            yPosition += 15;
-            pdf.setFontSize(8);
-            pdf.setFont('helvetica', 'normal');
-          }
-          
-          // Make first row (header) bold
-          if (rowIndex === 0) {
-            pdf.setFont('helvetica', 'bold');
-          }
-          
-          // Process each cell in the row
-          for (let colIndex = 0; colIndex < Math.min(row.length, maxColsToShow); colIndex++) {
-            const cellValue = row[colIndex];
-            const xPosition = 20 + (colIndex * baseColWidth);
+            const xPosition = margin + (colNum - range.s.c) * colWidth;
             
             // Draw cell border
-            pdf.setDrawColor(180, 180, 180);
-            pdf.setLineWidth(0.1);
-            pdf.rect(xPosition, yPosition - rowHeight + 1, baseColWidth, rowHeight);
+            pdf.setDrawColor(0, 0, 0);
+            pdf.setLineWidth(0.3);
+            pdf.rect(xPosition, yPosition - rowHeight + 1, colWidth, rowHeight);
             
-            // Process cell content
-            let displayText = '';
-            if (cellValue !== null && cellValue !== undefined && cellValue !== '') {
-              displayText = String(cellValue).trim();
-              
-              // Handle special characters and currency
-              displayText = displayText
-                .replace(/₹/g, 'Rs. ')
-                .replace(/€/g, 'EUR ')
-                .replace(/£/g, 'GBP ')
-                .replace(/¥/g, 'JPY ')
-                .replace(/\$/g, 'USD ');
-              
-              // Truncate long text
-              const maxTextLength = Math.floor(baseColWidth / 1.8);
-              if (displayText.length > maxTextLength) {
-                displayText = displayText.substring(0, maxTextLength - 3) + '...';
-              }
-            }
-            
-            // Draw text with proper positioning
-            if (displayText) {
-              try {
-                pdf.text(displayText, xPosition + 1, yPosition - 2);
-              } catch (textError) {
-                console.warn(`Text rendering error for cell [${rowIndex}][${colIndex}]:`, textError);
-                // Fallback: remove special characters
-                const fallbackText = displayText.replace(/[^\x00-\x7F]/g, '?');
-                try {
-                  pdf.text(fallbackText, xPosition + 1, yPosition - 2);
-                } catch {
-                  pdf.text('...', xPosition + 1, yPosition - 2);
+            // Get cell content
+            let cellValue = '';
+            if (cell) {
+              if (cell.w) {
+                // Use formatted value if available
+                cellValue = String(cell.w);
+              } else if (cell.v !== undefined) {
+                // Use raw value and format it
+                if (typeof cell.v === 'number') {
+                  // Handle numbers with proper formatting
+                  if (cell.t === 'd') {
+                    // Date
+                    cellValue = new Date(cell.v).toLocaleDateString('en-IN');
+                  } else if (cell.f && cell.f.startsWith('SUM')) {
+                    // Formula result
+                    cellValue = cell.v.toLocaleString('en-IN');
+                  } else {
+                    cellValue = cell.v.toLocaleString('en-IN');
+                  }
+                } else {
+                  cellValue = String(cell.v);
                 }
               }
             }
-          }
-          
-          // Reset font weight after header row
-          if (rowIndex === 0) {
-            pdf.setFont('helvetica', 'normal');
+            
+            // Set font style
+            if (isHeaderRow) {
+              pdf.setFont('helvetica', 'bold');
+              pdf.setFontSize(9);
+            } else {
+              pdf.setFont('helvetica', 'normal');
+              pdf.setFontSize(8);
+            }
+            
+            // Handle text alignment and truncation
+            if (cellValue) {
+              const maxWidth = colWidth - 2;
+              let displayText = cellValue;
+              
+              // Truncate if text is too long
+              const textWidth = pdf.getTextWidth(displayText);
+              if (textWidth > maxWidth) {
+                while (pdf.getTextWidth(displayText + '...') > maxWidth && displayText.length > 0) {
+                  displayText = displayText.slice(0, -1);
+                }
+                displayText += '...';
+              }
+              
+              // Position text in cell (center vertically, left align horizontally)
+              const textX = xPosition + 1;
+              const textY = yPosition - (rowHeight / 2) + 1;
+              
+              try {
+                pdf.text(displayText, textX, textY);
+              } catch (textError) {
+                console.warn(`Text rendering error:`, textError);
+                // Fallback for special characters
+                const fallbackText = displayText.replace(/[^\x00-\x7F]/g, '?');
+                pdf.text(fallbackText, textX, textY);
+              }
+            }
           }
           
           yPosition += rowHeight;
-        });
+        }
         
-        // Add sheet summary
-        yPosition += 10;
+        // Add conversion info at bottom
+        yPosition += 15;
         pdf.setFontSize(7);
+        pdf.setFont('helvetica', 'normal');
         pdf.setTextColor(100, 100, 100);
         
-        const actualRows = sheetData.length;
-        const actualCols = maxCols;
-        const shownRows = Math.min(actualRows, maxRows);
-        const shownCols = Math.min(actualCols, maxColsToShow);
+        const conversionInfo = [
+          `Converted from: ${file.name}`,
+          `Sheet: ${sheetName}`,
+          `Conversion Date: ${new Date().toLocaleString('en-IN')}`,
+          `Rows: ${range.e.r - range.s.r + 1}, Columns: ${range.e.c - range.s.c + 1}`
+        ];
         
-        pdf.text(`Showing ${shownRows}/${actualRows} rows, ${shownCols}/${actualCols} columns`, 20, yPosition);
-        
-        if (actualRows > maxRows || actualCols > maxColsToShow) {
-          yPosition += 4;
-          pdf.text('Note: Large data truncated for optimal PDF display', 20, yPosition);
-        }
+        conversionInfo.forEach((info, index) => {
+          if (yPosition + (index * 4) < pageHeight - margin) {
+            pdf.text(info, margin, yPosition + (index * 4));
+          }
+        });
         
         pdf.setTextColor(0, 0, 0);
         totalProcessedSheets++;

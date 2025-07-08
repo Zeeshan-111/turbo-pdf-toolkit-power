@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { Upload, Download, FileText, Scissors, ArrowLeft, CheckSquare, Square, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { PDFUtils } from "@/utils/pdfUtils";

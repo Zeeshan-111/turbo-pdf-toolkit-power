@@ -280,8 +280,8 @@ File Details:
       console.log('Starting aggressive PDF compression with level:', compressionLevel);
       const arrayBuffer = await this.fileToArrayBuffer(file);
       
-      // First, try to re-render the PDF through canvas for better compression
-      const compressedPdf = await this.recompressPDFThroughCanvas(file, compressionLevel);
+      // Always use canvas-based recompression for effective compression
+      const compressedPdf = await this.canvasBasedCompression(file, compressionLevel);
       
       if (compressedPdf) {
         const originalSize = arrayBuffer.byteLength;
@@ -293,17 +293,11 @@ File Details:
         console.log(`Compressed size: ${(compressedSize / 1024).toFixed(2)} KB`);
         console.log(`Compression ratio: ${compressionRatio.toFixed(1)}%`);
         
-        // If compression is not significant, try alternative method
-        if (compressionRatio < 10) {
-          console.log('Low compression achieved, trying alternative method...');
-          return await this.alternativeCompressionMethod(arrayBuffer, compressionLevel);
-        }
-        
         return compressedPdf;
       }
       
-      // Fallback to basic compression
-      return await this.basicPDFCompression(arrayBuffer, compressionLevel);
+      // Fallback - but this should not happen
+      throw new Error('Canvas-based compression failed');
       
     } catch (error) {
       console.error('PDF compression error:', error);
@@ -311,176 +305,144 @@ File Details:
     }
   }
 
-  private static async recompressPDFThroughCanvas(file: File, compressionLevel: 'low' | 'medium' | 'high'): Promise<Uint8Array | null> {
+  private static async canvasBasedCompression(file: File, compressionLevel: 'low' | 'medium' | 'high'): Promise<Uint8Array> {
     try {
-      // Convert PDF to images with compression settings
+      console.log('Starting canvas-based compression with level:', compressionLevel);
+      
+      // More aggressive quality settings for better compression
       const qualitySettings = {
-        low: { scale: 1.2, quality: 0.9 },
-        medium: { scale: 1.0, quality: 0.7 },
-        high: { scale: 0.8, quality: 0.5 }
+        low: { scale: 1.5, quality: 0.85, dpi: 150 },      // Light compression
+        medium: { scale: 1.0, quality: 0.65, dpi: 120 },  // Medium compression  
+        high: { scale: 0.75, quality: 0.45, dpi: 96 }     // Heavy compression
       };
       
       const settings = qualitySettings[compressionLevel];
       const arrayBuffer = await this.fileToArrayBuffer(file);
       
+      console.log('Loading PDF with pdfjs-dist...');
       const loadingTask = pdfjsLib.getDocument({ 
         data: arrayBuffer,
-        verbosity: 0
+        verbosity: 0,
+        useSystemFonts: false,
+        disableFontFace: true
       });
       
       const pdf = await loadingTask.promise;
-      const compressedPdf = new jsPDF();
+      console.log(`PDF loaded successfully, ${pdf.numPages} pages`);
+      
+      // Create new compressed PDF
+      const compressedPdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'pt',
+        format: 'a4',
+        compress: true
+      });
+      
       let isFirstPage = true;
       
       for (let i = 1; i <= pdf.numPages; i++) {
+        console.log(`Processing page ${i}/${pdf.numPages} with ${compressionLevel} compression`);
+        
         const page = await pdf.getPage(i);
         const viewport = page.getViewport({ scale: settings.scale });
         
         const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
+        const context = canvas.getContext('2d', {
+          alpha: false,
+          willReadFrequently: false,
+          desynchronized: true
+        });
         
-        if (!context) continue;
+        if (!context) {
+          throw new Error('Failed to get canvas context');
+        }
         
-        canvas.height = viewport.height;
         canvas.width = viewport.width;
+        canvas.height = viewport.height;
         
-        // White background for better compression
+        // White background for better JPEG compression
         context.fillStyle = '#FFFFFF';
         context.fillRect(0, 0, canvas.width, canvas.height);
         
+        // Render page to canvas
         await page.render({
           canvasContext: context,
-          viewport: viewport
+          viewport: viewport,
+          background: 'white'
         }).promise;
         
-        // Convert to JPEG with compression
-        const imageData = canvas.toDataURL('image/jpeg', settings.quality);
+        // Convert to compressed JPEG
+        const compressedImageData = canvas.toDataURL('image/jpeg', settings.quality);
         
         if (!isFirstPage) {
           compressedPdf.addPage();
         }
         
-        // Calculate dimensions to fit page
+        // Calculate page dimensions maintaining aspect ratio
         const pageWidth = compressedPdf.internal.pageSize.getWidth();
         const pageHeight = compressedPdf.internal.pageSize.getHeight();
-        const imgAspectRatio = canvas.width / canvas.height;
+        
+        // Create image to get actual dimensions
+        const img = new Image();
+        await new Promise((resolve) => {
+          img.onload = resolve;
+          img.src = compressedImageData;
+        });
+        
+        const imgAspectRatio = img.width / img.height;
         const pageAspectRatio = pageWidth / pageHeight;
         
-        let imgWidth, imgHeight;
+        let finalWidth, finalHeight, x, y;
+        
         if (imgAspectRatio > pageAspectRatio) {
-          imgWidth = pageWidth;
-          imgHeight = pageWidth / imgAspectRatio;
+          // Image is wider than page
+          finalWidth = pageWidth - 20; // 10pt margin on each side
+          finalHeight = finalWidth / imgAspectRatio;
+          x = 10;
+          y = (pageHeight - finalHeight) / 2;
         } else {
-          imgHeight = pageHeight;
-          imgWidth = pageHeight * imgAspectRatio;
+          // Image is taller than page
+          finalHeight = pageHeight - 20; // 10pt margin on top/bottom
+          finalWidth = finalHeight * imgAspectRatio;
+          x = (pageWidth - finalWidth) / 2;
+          y = 10;
         }
         
-        const x = (pageWidth - imgWidth) / 2;
-        const y = (pageHeight - imgHeight) / 2;
+        // Add compressed image to PDF
+        compressedPdf.addImage(
+          compressedImageData,
+          'JPEG',
+          x,
+          y,
+          finalWidth,
+          finalHeight,
+          undefined,
+          'FAST'
+        );
         
-        compressedPdf.addImage(imageData, 'JPEG', x, y, imgWidth, imgHeight);
         isFirstPage = false;
         
         // Clean up
         canvas.width = 0;
         canvas.height = 0;
         page.cleanup();
+        
+        console.log(`Page ${i} compressed and added to PDF`);
       }
       
+      // Clean up original PDF
       pdf.destroy();
       
+      console.log('Generating final compressed PDF...');
       const result = compressedPdf.output('arraybuffer');
-      return new Uint8Array(result);
+      const compressedBytes = new Uint8Array(result);
       
-    } catch (error) {
-      console.error('Canvas recompression failed:', error);
-      return null;
-    }
-  }
-
-  private static async alternativeCompressionMethod(arrayBuffer: ArrayBuffer, compressionLevel: 'low' | 'medium' | 'high'): Promise<Uint8Array> {
-    try {
-      const pdf = await PDFDocument.load(arrayBuffer);
-      
-      // Remove all metadata for maximum compression
-      pdf.setTitle('');
-      pdf.setAuthor('');
-      pdf.setSubject('');
-      pdf.setKeywords([]);
-      pdf.setCreator('Compressed');
-      pdf.setProducer('PDF Compressor');
-      pdf.setCreationDate(new Date());
-      pdf.setModificationDate(new Date());
-      
-      // Get compression settings
-      const settings = this.getCompressionSettings(compressionLevel);
-      
-      // Save with maximum compression
-      const compressedBytes = await pdf.save({
-        useObjectStreams: true,
-        addDefaultPage: false,
-        objectsPerTick: settings.objectsPerTick,
-        updateFieldAppearances: false
-      });
-      
+      console.log(`Canvas-based compression completed. Size: ${(compressedBytes.length / 1024).toFixed(2)} KB`);
       return compressedBytes;
+      
     } catch (error) {
-      console.error('Alternative compression failed:', error);
-      throw error;
-    }
-  }
-
-  private static async basicPDFCompression(arrayBuffer: ArrayBuffer, compressionLevel: 'low' | 'medium' | 'high'): Promise<Uint8Array> {
-    const pdf = await PDFDocument.load(arrayBuffer);
-    
-    // Remove metadata for better compression
-    pdf.setTitle('');
-    pdf.setAuthor('');
-    pdf.setSubject('');
-    pdf.setCreator('PDF Compressor');
-    pdf.setProducer('PDF Compressor');
-    pdf.setCreationDate(new Date());
-    pdf.setModificationDate(new Date());
-    
-    // Get compression settings based on level
-    const settings = this.getCompressionSettings(compressionLevel);
-    
-    const compressedPdf = await pdf.save({
-      useObjectStreams: true,
-      addDefaultPage: false,
-      objectsPerTick: settings.objectsPerTick,
-      updateFieldAppearances: false
-    });
-    
-    return compressedPdf;
-  }
-
-  private static getCompressionSettings(level: 'low' | 'medium' | 'high') {
-    switch (level) {
-      case 'low':
-        return {
-          objectsPerTick: 200,
-          removeMetadata: false,
-          optimizeStreams: true
-        };
-      case 'medium':
-        return {
-          objectsPerTick: 100,
-          removeMetadata: true,
-          optimizeStreams: true
-        };
-      case 'high':
-        return {
-          objectsPerTick: 50,
-          removeMetadata: true,
-          optimizeStreams: true
-        };
-      default:
-        return {
-          objectsPerTick: 100,
-          removeMetadata: true,
-          optimizeStreams: true
-        };
+      console.error('Canvas-based compression failed:', error);
+      throw new Error(`Canvas compression failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

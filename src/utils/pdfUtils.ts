@@ -1,3 +1,4 @@
+
 import { PDFDocument, PDFPage, rgb } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -9,6 +10,94 @@ export interface CompressionStats {
   originalSize: number;
   compressedSize: number;
   compressionRatio: number;
+}
+
+// Export PDFUtils class for compatibility with existing code
+export class PDFUtils {
+  static async getPageCount(file: File): Promise<number> {
+    const arrayBuffer = await file.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+    return pdf.numPages;
+  }
+
+  static async extractText(file: File): Promise<string> {
+    const arrayBuffer = await file.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+    
+    let fullText = '';
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .filter((item): item is { str: string } => 'str' in item)
+        .map(item => item.str)
+        .join(' ');
+      fullText += pageText + '\n';
+    }
+    
+    return fullText;
+  }
+
+  static async pdfToImages(file: File, format: 'jpeg' | 'png' = 'jpeg'): Promise<string[]> {
+    const arrayBuffer = await file.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+    
+    const images: string[] = [];
+    
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const viewport = page.getViewport({ scale: 1.5 });
+      
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      
+      if (!context) {
+        throw new Error('Could not get 2D context from canvas');
+      }
+      
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+      
+      const renderContext = {
+        canvasContext: context,
+        viewport: viewport,
+      };
+      
+      await page.render(renderContext).promise;
+      
+      const dataUrl = canvas.toDataURL(`image/${format}`, 0.8);
+      images.push(dataUrl);
+    }
+    
+    return images;
+  }
+
+  static async splitPDF(file: File, pageNumbers: number[]): Promise<Uint8Array> {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(arrayBuffer);
+    const newPdfDoc = await PDFDocument.create();
+    
+    const pages = await newPdfDoc.copyPages(pdfDoc, pageNumbers.map(num => num - 1));
+    pages.forEach(page => newPdfDoc.addPage(page));
+    
+    return await newPdfDoc.save();
+  }
+
+  static async mergePDFs(files: File[]): Promise<Uint8Array> {
+    const mergedPdf = await PDFDocument.create();
+    
+    for (const file of files) {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await PDFDocument.load(arrayBuffer);
+      const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+      copiedPages.forEach(page => mergedPdf.addPage(page));
+    }
+    
+    return await mergedPdf.save();
+  }
 }
 
 export const compressPDF = async (

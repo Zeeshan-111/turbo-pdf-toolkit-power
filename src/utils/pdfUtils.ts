@@ -1,3 +1,4 @@
+
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import { jsPDF } from 'jspdf';
@@ -276,39 +277,182 @@ File Details:
 
   static async compressPDF(file: File, compressionLevel: 'low' | 'medium' | 'high' = 'medium'): Promise<Uint8Array> {
     try {
-      console.log('Starting advanced PDF compression');
+      console.log('Starting aggressive PDF compression with level:', compressionLevel);
       const arrayBuffer = await this.fileToArrayBuffer(file);
+      
+      // First, try to re-render the PDF through canvas for better compression
+      const compressedPdf = await this.recompressPDFThroughCanvas(file, compressionLevel);
+      
+      if (compressedPdf) {
+        const originalSize = arrayBuffer.byteLength;
+        const compressedSize = compressedPdf.length;
+        const compressionRatio = ((originalSize - compressedSize) / originalSize * 100);
+        
+        console.log(`PDF compression completed with ${compressionLevel} level`);
+        console.log(`Original size: ${(originalSize / 1024).toFixed(2)} KB`);
+        console.log(`Compressed size: ${(compressedSize / 1024).toFixed(2)} KB`);
+        console.log(`Compression ratio: ${compressionRatio.toFixed(1)}%`);
+        
+        // If compression is not significant, try alternative method
+        if (compressionRatio < 10) {
+          console.log('Low compression achieved, trying alternative method...');
+          return await this.alternativeCompressionMethod(arrayBuffer, compressionLevel);
+        }
+        
+        return compressedPdf;
+      }
+      
+      // Fallback to basic compression
+      return await this.basicPDFCompression(arrayBuffer, compressionLevel);
+      
+    } catch (error) {
+      console.error('PDF compression error:', error);
+      throw new Error(`Failed to compress PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private static async recompressPDFThroughCanvas(file: File, compressionLevel: 'low' | 'medium' | 'high'): Promise<Uint8Array | null> {
+    try {
+      // Convert PDF to images with compression settings
+      const qualitySettings = {
+        low: { scale: 1.2, quality: 0.9 },
+        medium: { scale: 1.0, quality: 0.7 },
+        high: { scale: 0.8, quality: 0.5 }
+      };
+      
+      const settings = qualitySettings[compressionLevel];
+      const arrayBuffer = await this.fileToArrayBuffer(file);
+      
+      const loadingTask = pdfjsLib.getDocument({ 
+        data: arrayBuffer,
+        verbosity: 0
+      });
+      
+      const pdf = await loadingTask.promise;
+      const compressedPdf = new jsPDF();
+      let isFirstPage = true;
+      
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: settings.scale });
+        
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        
+        if (!context) continue;
+        
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        
+        // White background for better compression
+        context.fillStyle = '#FFFFFF';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        
+        await page.render({
+          canvasContext: context,
+          viewport: viewport
+        }).promise;
+        
+        // Convert to JPEG with compression
+        const imageData = canvas.toDataURL('image/jpeg', settings.quality);
+        
+        if (!isFirstPage) {
+          compressedPdf.addPage();
+        }
+        
+        // Calculate dimensions to fit page
+        const pageWidth = compressedPdf.internal.pageSize.getWidth();
+        const pageHeight = compressedPdf.internal.pageSize.getHeight();
+        const imgAspectRatio = canvas.width / canvas.height;
+        const pageAspectRatio = pageWidth / pageHeight;
+        
+        let imgWidth, imgHeight;
+        if (imgAspectRatio > pageAspectRatio) {
+          imgWidth = pageWidth;
+          imgHeight = pageWidth / imgAspectRatio;
+        } else {
+          imgHeight = pageHeight;
+          imgWidth = pageHeight * imgAspectRatio;
+        }
+        
+        const x = (pageWidth - imgWidth) / 2;
+        const y = (pageHeight - imgHeight) / 2;
+        
+        compressedPdf.addImage(imageData, 'JPEG', x, y, imgWidth, imgHeight);
+        isFirstPage = false;
+        
+        // Clean up
+        canvas.width = 0;
+        canvas.height = 0;
+        page.cleanup();
+      }
+      
+      pdf.destroy();
+      
+      const result = compressedPdf.output('arraybuffer');
+      return new Uint8Array(result);
+      
+    } catch (error) {
+      console.error('Canvas recompression failed:', error);
+      return null;
+    }
+  }
+
+  private static async alternativeCompressionMethod(arrayBuffer: ArrayBuffer, compressionLevel: 'low' | 'medium' | 'high'): Promise<Uint8Array> {
+    try {
       const pdf = await PDFDocument.load(arrayBuffer);
       
-      // Remove unnecessary metadata for better compression
+      // Remove all metadata for maximum compression
       pdf.setTitle('');
       pdf.setAuthor('');
       pdf.setSubject('');
-      pdf.setCreator('PDF Compressor');
+      pdf.setKeywords([]);
+      pdf.setCreator('Compressed');
       pdf.setProducer('PDF Compressor');
       pdf.setCreationDate(new Date());
       pdf.setModificationDate(new Date());
       
-      // Get compression settings based on level
+      // Get compression settings
       const settings = this.getCompressionSettings(compressionLevel);
       
-      const compressedPdf = await pdf.save({
+      // Save with maximum compression
+      const compressedBytes = await pdf.save({
         useObjectStreams: true,
         addDefaultPage: false,
         objectsPerTick: settings.objectsPerTick,
         updateFieldAppearances: false
       });
       
-      console.log('PDF compression completed');
-      console.log(`Original size: ${(arrayBuffer.byteLength / 1024).toFixed(2)} KB`);
-      console.log(`Compressed size: ${(compressedPdf.length / 1024).toFixed(2)} KB`);
-      console.log(`Compression ratio: ${(((arrayBuffer.byteLength - compressedPdf.length) / arrayBuffer.byteLength) * 100).toFixed(1)}%`);
-      
-      return compressedPdf;
+      return compressedBytes;
     } catch (error) {
-      console.error('PDF compression error:', error);
-      throw new Error(`Failed to compress PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Alternative compression failed:', error);
+      throw error;
     }
+  }
+
+  private static async basicPDFCompression(arrayBuffer: ArrayBuffer, compressionLevel: 'low' | 'medium' | 'high'): Promise<Uint8Array> {
+    const pdf = await PDFDocument.load(arrayBuffer);
+    
+    // Remove metadata for better compression
+    pdf.setTitle('');
+    pdf.setAuthor('');
+    pdf.setSubject('');
+    pdf.setCreator('PDF Compressor');
+    pdf.setProducer('PDF Compressor');
+    pdf.setCreationDate(new Date());
+    pdf.setModificationDate(new Date());
+    
+    // Get compression settings based on level
+    const settings = this.getCompressionSettings(compressionLevel);
+    
+    const compressedPdf = await pdf.save({
+      useObjectStreams: true,
+      addDefaultPage: false,
+      objectsPerTick: settings.objectsPerTick,
+      updateFieldAppearances: false
+    });
+    
+    return compressedPdf;
   }
 
   private static getCompressionSettings(level: 'low' | 'medium' | 'high') {

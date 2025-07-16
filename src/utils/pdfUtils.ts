@@ -31,8 +31,8 @@ export class PDFUtils {
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
       const pageText = textContent.items
-        .filter((item): item is { str: string } => 'str' in item)
-        .map(item => item.str)
+        .filter((item: any) => item.str)
+        .map((item: any) => item.str)
         .join(' ');
       fullText += pageText + '\n';
     }
@@ -52,7 +52,7 @@ export class PDFUtils {
       const viewport = page.getViewport({ scale: 1.5 });
       
       const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
+      const context = canvas.getContext('2d') as CanvasRenderingContext2D;
       
       if (!context) {
         throw new Error('Could not get 2D context from canvas');
@@ -97,6 +97,72 @@ export class PDFUtils {
     }
     
     return await mergedPdf.save();
+  }
+
+  static async imagesToPDF(files: File[]): Promise<Uint8Array> {
+    const pdfDoc = await PDFDocument.create();
+    
+    for (const file of files) {
+      const imageBytes = await file.arrayBuffer();
+      let image;
+      
+      if (file.type === 'image/png') {
+        image = await pdfDoc.embedPng(imageBytes);
+      } else if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
+        image = await pdfDoc.embedJpg(imageBytes);
+      } else {
+        throw new Error(`Unsupported image format: ${file.type}`);
+      }
+      
+      const page = pdfDoc.addPage();
+      const { width, height } = image.scale(1);
+      
+      page.setSize(width, height);
+      page.drawImage(image, {
+        x: 0,
+        y: 0,
+        width,
+        height,
+      });
+    }
+    
+    return await pdfDoc.save();
+  }
+
+  static async lockPDF(file: File, password: string): Promise<Uint8Array> {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(arrayBuffer);
+    
+    // Note: pdf-lib doesn't support password protection directly
+    // This is a placeholder that returns the original PDF
+    // In a real implementation, you'd need a different library or server-side processing
+    console.warn('Password protection not fully implemented in browser environment');
+    
+    return await pdfDoc.save();
+  }
+
+  static async wordToPDF(file: File): Promise<Uint8Array> {
+    // Basic Word to PDF conversion by extracting text and creating a simple PDF
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage();
+    
+    // For a proper implementation, you'd need to parse the Word document
+    // This is a basic placeholder that creates a PDF with the filename
+    page.drawText(`Word document: ${file.name}\n\nNote: Full Word to PDF conversion requires server-side processing.`, {
+      x: 50,
+      y: page.getHeight() - 100,
+      size: 12,
+      color: rgb(0, 0, 0),
+    });
+    
+    return await pdfDoc.save();
+  }
+
+  static async compressPDF(file: File, compressionLevel: 'low' | 'medium' | 'high' = 'medium'): Promise<Uint8Array> {
+    return await compressPDF(file, compressionLevel).then(result => {
+      const uint8Array = new Uint8Array(result.blob.size);
+      return result.blob.arrayBuffer().then(buffer => new Uint8Array(buffer));
+    });
   }
 }
 

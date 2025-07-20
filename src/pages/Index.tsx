@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ToolCard from "@/components/ToolCard";
+import CustomerSuggestion from "@/components/CustomerSuggestion";
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -220,6 +221,9 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* Customer Suggestion Section */}
+      <CustomerSuggestion />
 
       <Footer />
     </div>

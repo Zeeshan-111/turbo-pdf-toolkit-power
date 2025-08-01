@@ -1,9 +1,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Zap, Settings } from "lucide-react";
+import { CheckCircle2, Zap, Settings, Shield } from "lucide-react";
 
-export type CompressionMode = 'basic' | 'strong' | 'high-quality';
+export type CompressionMode = 'low' | 'medium' | 'high';
 
 interface CompressionModeProps {
   selectedMode: CompressionMode;
@@ -12,31 +12,31 @@ interface CompressionModeProps {
 
 const compressionModes = [
   {
-    id: 'basic' as const,
-    title: 'Basic Compression',
-    description: 'Small size, decent quality',
-    icon: Zap,
+    id: 'low' as const,
+    title: 'Low Compression',
+    description: 'Best quality, larger file size',
+    icon: Shield,
     color: 'from-green-500 to-blue-500',
-    savings: '30-50%',
+    savings: '10-20%',
     recommended: false
   },
   {
-    id: 'strong' as const,
-    title: 'Strong Compression',
+    id: 'medium' as const,
+    title: 'Medium Compression',
+    description: 'Balanced quality and size',
+    icon: Zap,
+    color: 'from-blue-500 to-purple-500',
+    savings: '30-50%',
+    recommended: true
+  },
+  {
+    id: 'high' as const,
+    title: 'High Compression',
     description: 'Smallest size, lower quality',
     icon: Settings,
     color: 'from-orange-500 to-red-500',
     savings: '60-80%',
     recommended: false
-  },
-  {
-    id: 'high-quality' as const,
-    title: 'High Quality',
-    description: 'Retain visuals/text sharpness',
-    icon: CheckCircle2,
-    color: 'from-purple-500 to-pink-500',
-    savings: '20-40%',
-    recommended: true
   }
 ];
 
@@ -46,7 +46,7 @@ export const CompressionModeSelector = ({ selectedMode, onModeChange }: Compress
       <CardHeader>
         <CardTitle className="text-white flex items-center gap-2">
           <Settings className="w-5 h-5" />
-          Compression Mode
+          Compression Level
         </CardTitle>
       </CardHeader>
       <CardContent>

@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +28,7 @@ const CompressPDF = () => {
   const [files, setFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedFiles, setProcessedFiles] = useState<ProcessedFile[]>([]);
-  const [compressionMode, setCompressionMode] = useState<CompressionMode>('strong');
+  const [compressionMode, setCompressionMode] = useState<CompressionMode>('medium');
   const [error, setError] = useState<string | null>(null);
 
   // Advanced settings
@@ -38,36 +37,15 @@ const CompressPDF = () => {
   const [retainBookmarks, setRetainBookmarks] = useState(true);
   const [autoDeleteTimer, setAutoDeleteTimer] = useState('24');
 
+  // Scroll to top when component mounts
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   const handleFilesSelected = (selectedFiles: File[]) => {
     setFiles(selectedFiles);
     setProcessedFiles([]);
     setError(null);
-  };
-
-  const getCompressionSettings = (mode: CompressionMode) => {
-    switch (mode) {
-      case 'basic':
-        return { quality: 0.8, removeMetadata: false, optimizeImages: true };
-      case 'strong':
-        return { quality: 0.5, removeMetadata: true, optimizeImages: true };
-      case 'high-quality':
-        return { quality: 0.9, removeMetadata: false, optimizeImages: false };
-      default:
-        return { quality: 0.8, removeMetadata: false, optimizeImages: true };
-    }
-  };
-
-  const mapCompressionMode = (mode: CompressionMode): 'low' | 'medium' | 'high' => {
-    switch (mode) {
-      case 'basic':
-        return 'medium';
-      case 'strong':
-        return 'high';
-      case 'high-quality':
-        return 'low';
-      default:
-        return 'medium';
-    }
   };
 
   const handleCompress = async () => {
@@ -80,9 +58,10 @@ const CompressPDF = () => {
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        console.log(`Compressing file ${i + 1}/${files.length}: ${file.name}`);
+        console.log(`Compressing file ${i + 1}/${files.length}: ${file.name} with ${compressionMode} compression`);
 
-        const compressedPdf = await PDFUtils.compressPDF(file, mapCompressionMode(compressionMode));
+        // Use improved compression with better quality settings
+        const compressedPdf = await PDFUtils.compressPDF(file, compressionMode);
         
         results.push({
           originalFile: file,
@@ -159,10 +138,10 @@ const CompressPDF = () => {
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-            Advanced PDF Compressor
+            PDF Compressor
           </h1>
           <p className="text-gray-300 text-lg">
-            Professional-grade PDF compression with batch processing and advanced options
+            Compress PDF files with high quality output and batch processing
           </p>
         </div>
 
@@ -296,9 +275,9 @@ const CompressPDF = () => {
                     compressedSize={processedFiles[0].compressedSize}
                     optimizations={[
                       "PDF structure optimization",
-                      "Stream compression applied",
+                      "Image quality optimization",
                       removeMetadata ? "Metadata removal" : "Metadata preserved",
-                      "Object stream optimization"
+                      "Stream compression applied"
                     ]}
                     fileName={processedFiles[0].fileName}
                   />

@@ -6,29 +6,54 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const CustomerSuggestion = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    subject: "",
-    suggestion: ""
+    message: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.message.trim()) {
+      toast("Please enter a message", {
+        description: "The message field is required.",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
-    // Simulate form submission
-    setTimeout(() => {
+    try {
+      const { error } = await supabase
+        .from('suggestions')
+        .insert({
+          name: formData.name || null,
+          email: formData.email || null,
+          message: formData.message
+        });
+
+      if (error) {
+        throw error;
+      }
+
       toast("Thank you for your suggestion!", {
         description: "We appreciate your feedback and will review it soon.",
       });
       
-      setFormData({ name: "", email: "", subject: "", suggestion: "" });
+      setFormData({ name: "", email: "", message: "" });
+    } catch (error) {
+      console.error('Error submitting suggestion:', error);
+      toast("Failed to submit suggestion", {
+        description: "Please try again later or contact support if the problem persists.",
+      });
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -65,7 +90,7 @@ const CustomerSuggestion = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
-                    Name
+                    Name (optional)
                   </label>
                   <Input
                     id="name"
@@ -73,14 +98,14 @@ const CustomerSuggestion = () => {
                     type="text"
                     value={formData.name}
                     onChange={handleChange}
-                    required
+                    disabled={isSubmitting}
                     className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
                     placeholder="Your name"
                   />
                 </div>
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                    Email
+                    Email (optional)
                   </label>
                   <Input
                     id="email"
@@ -88,7 +113,7 @@ const CustomerSuggestion = () => {
                     type="email"
                     value={formData.email}
                     onChange={handleChange}
-                    required
+                    disabled={isSubmitting}
                     className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
                     placeholder="your.email@example.com"
                   />
@@ -96,31 +121,16 @@ const CustomerSuggestion = () => {
               </div>
               
               <div>
-                <label htmlFor="subject" className="block text-sm font-medium text-gray-300 mb-2">
-                  Subject
-                </label>
-                <Input
-                  id="subject"
-                  name="subject"
-                  type="text"
-                  value={formData.subject}
-                  onChange={handleChange}
-                  required
-                  className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
-                  placeholder="Feature request, bug report, general feedback..."
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="suggestion" className="block text-sm font-medium text-gray-300 mb-2">
-                  Your Suggestion
+                <label htmlFor="message" className="block text-sm font-medium text-gray-300 mb-2">
+                  Your Suggestion *
                 </label>
                 <Textarea
-                  id="suggestion"
-                  name="suggestion"
-                  value={formData.suggestion}
+                  id="message"
+                  name="message"
+                  value={formData.message}
                   onChange={handleChange}
                   required
+                  disabled={isSubmitting}
                   rows={6}
                   className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500 resize-none"
                   placeholder="Please share your detailed suggestion, feature request, or feedback here..."
@@ -131,7 +141,7 @@ const CustomerSuggestion = () => {
                 type="submit"
                 disabled={isSubmitting}
                 size="lg"
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white disabled:opacity-50"
               >
                 {isSubmitting ? (
                   "Submitting..."

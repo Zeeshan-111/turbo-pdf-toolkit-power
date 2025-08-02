@@ -1,11 +1,9 @@
-
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { FileText, Upload, Download, Loader2, CheckCircle, Image, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import ToolPageLayout from "@/components/ToolPageLayout";
 import { useToast } from "@/hooks/use-toast";
 import { PDFUtils } from "@/utils/pdfUtils";
 
@@ -100,11 +98,41 @@ const PNGToPDF = () => {
     }
   };
 
+  const toolData = {
+    title: "Convert PNG to PDF Online Free - High Quality Image to PDF Converter",
+    description: "Convert PNG images to PDF instantly. Combine multiple PNG files into one PDF document with high quality. Free, fast, and secure PNG to PDF conversion.",
+    toolName: "PNG to PDF Converter",
+    toolUrl: "https://pdftoolspro.com/tools/png-to-pdf",
+    breadcrumbs: [
+      { name: "Tools", url: "https://pdftoolspro.com/#tools" },
+      { name: "Image Conversion", url: "https://pdftoolspro.com/tools/png-to-pdf" }
+    ],
+    howToSteps: [
+      "Upload your PNG image files by clicking or dragging them into the upload area",
+      "Preview your selected images and remove any you don't want to include",
+      "Click 'Convert to PDF' to start the conversion process",
+      "Download your converted PDF file once the process is complete"
+    ],
+    faqs: [
+      {
+        question: "Can I convert multiple PNG images to one PDF?",
+        answer: "Yes! You can upload multiple PNG files and our tool will combine them into a single PDF document. Each image will appear on a separate page in the PDF."
+      },
+      {
+        question: "Will the image quality be preserved?",
+        answer: "Absolutely. Our PNG to PDF converter maintains the original image quality and resolution. Your images will look exactly the same in the PDF as they do in their original PNG format."
+      },
+      {
+        question: "Is there a file size limit for PNG images?",
+        answer: "There are no strict file size limits. However, very large images may take longer to process. We recommend keeping individual images under 50MB for optimal performance."
+      }
+    ],
+    keywords: "PNG to PDF converter, convert PNG to PDF, image to PDF, PNG to PDF online free, combine PNG files PDF"
+  };
+
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <Header />
-      
-      <div className="max-w-4xl mx-auto px-4 py-12">
+    <ToolPageLayout {...toolData}>
+      <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <div className="w-16 h-16 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center mx-auto mb-6">
             <FileText className="w-8 h-8 text-white" />
@@ -113,7 +141,7 @@ const PNGToPDF = () => {
             PNG to PDF Converter
           </h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Convert multiple PNG images into a single PDF document with high quality output.
+            Convert multiple PNG images into a single PDF document with high quality output and perfect formatting.
           </p>
         </div>
 
@@ -256,9 +284,7 @@ const PNGToPDF = () => {
           </div>
         </div>
       </div>
-
-      <Footer />
-    </div>
+    </ToolPageLayout>
   );
 };
 

@@ -1,11 +1,9 @@
-
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { FileText, Upload, Download, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import ToolPageLayout from "@/components/ToolPageLayout";
 import { useToast } from "@/hooks/use-toast";
 import { PDFUtils } from "@/utils/pdfUtils";
 
@@ -109,11 +107,41 @@ const WordToPDF = () => {
     });
   };
 
+  const toolData = {
+    title: "Convert Word to PDF Online Free - DOC DOCX to PDF Converter",
+    description: "Convert Word documents (DOC, DOCX) to PDF format online for free. Maintain formatting and layout while converting Microsoft Word files to PDF instantly.",
+    toolName: "Word to PDF Converter",
+    toolUrl: "https://pdftoolspro.com/tools/word-to-pdf",
+    breadcrumbs: [
+      { name: "Tools", url: "https://pdftoolspro.com/#tools" },
+      { name: "Document Conversion", url: "https://pdftoolspro.com/tools/word-to-pdf" }
+    ],
+    howToSteps: [
+      "Upload your Word document (.doc or .docx) by clicking or dragging it into the upload area",
+      "Wait for the file to be processed and validated",
+      "Click 'Convert to PDF' to start the conversion process",
+      "Download your converted PDF file once the conversion is complete"
+    ],
+    faqs: [
+      {
+        question: "Which Word formats are supported?",
+        answer: "Our tool supports both .doc (older Word format) and .docx (newer Word format) files. You can upload documents created in any version of Microsoft Word."
+      },
+      {
+        question: "Will my document formatting be preserved?",
+        answer: "We do our best to preserve basic formatting like text, paragraphs, and structure. However, complex formatting like advanced tables or embedded objects may not be perfectly preserved due to browser limitations."
+      },
+      {
+        question: "Is there a file size limit for Word documents?",
+        answer: "While there's no strict limit, we recommend keeping files under 25MB for optimal performance. Larger files may take longer to process or may not work properly."
+      }
+    ],
+    keywords: "Word to PDF converter, DOC to PDF, DOCX to PDF, convert Word document to PDF, Microsoft Word to PDF online free"
+  };
+
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <Header />
-      
-      <div className="max-w-4xl mx-auto px-4 py-12">
+    <ToolPageLayout {...toolData}>
+      <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mx-auto mb-6">
             <FileText className="w-8 h-8 text-white" />
@@ -122,7 +150,7 @@ const WordToPDF = () => {
             Word to PDF Converter
           </h1>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Convert your Word documents (.docx, .doc) to PDF format quickly and easily.
+            Convert your Microsoft Word documents (.docx, .doc) to PDF format quickly and easily with our free online tool.
           </p>
         </div>
 
@@ -265,9 +293,7 @@ const WordToPDF = () => {
           </div>
         </div>
       </div>
-
-      <Footer />
-    </div>
+    </ToolPageLayout>
   );
 };
 

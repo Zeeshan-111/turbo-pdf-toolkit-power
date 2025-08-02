@@ -4,134 +4,192 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
         xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
     
-    <!-- Homepage -->
+    <!-- Homepage - Highest Priority -->
     <url>
         <loc>https://pdftoolspro.com/</loc>
-        <lastmod>2024-01-20</lastmod>
+        <lastmod>2024-08-02</lastmod>
         <changefreq>daily</changefreq>
         <priority>1.0</priority>
+        <image:image>
+            <image:loc>https://pdftoolspro.com/og-image.jpg</image:loc>
+            <image:caption>PDF Tools Pro - Free Online PDF Toolkit</image:caption>
+            <image:title>PDF Tools Pro Homepage</image:title>
+        </image:image>
     </url>
 
-    <!-- PDF Tools -->
+    <!-- High-Priority PDF Tools -->
     <url>
         <loc>https://pdftoolspro.com/tools/pdf-to-word</loc>
-        <lastmod>2024-01-20</lastmod>
+        <lastmod>2024-08-02</lastmod>
         <changefreq>weekly</changefreq>
-        <priority>0.9</priority>
+        <priority>0.95</priority>
     </url>
 
     <url>
         <loc>https://pdftoolspro.com/tools/merge-pdf</loc>
-        <lastmod>2024-01-20</lastmod>
+        <lastmod>2024-08-02</lastmod>
         <changefreq>weekly</changefreq>
-        <priority>0.9</priority>
+        <priority>0.95</priority>
     </url>
 
     <url>
         <loc>https://pdftoolspro.com/tools/split-pdf</loc>
-        <lastmod>2024-01-20</lastmod>
+        <lastmod>2024-08-02</lastmod>
         <changefreq>weekly</changefreq>
-        <priority>0.9</priority>
+        <priority>0.95</priority>
     </url>
 
     <url>
         <loc>https://pdftoolspro.com/tools/compress-pdf</loc>
-        <lastmod>2024-01-20</lastmod>
+        <lastmod>2024-08-02</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.95</priority>
+    </url>
+
+    <!-- Conversion Tools -->
+    <url>
+        <loc>https://pdftoolspro.com/tools/pdf-to-jpg</loc>
+        <lastmod>2024-08-02</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.9</priority>
     </url>
 
     <url>
-        <loc>https://pdftoolspro.com/tools/pdf-to-jpg</loc>
-        <lastmod>2024-01-20</lastmod>
-        <changefreq>weekly</changefreq>
-        <priority>0.8</priority>
-    </url>
-
-    <url>
         <loc>https://pdftoolspro.com/tools/pdf-to-png</loc>
-        <lastmod>2024-01-20</lastmod>
+        <lastmod>2024-08-02</lastmod>
         <changefreq>weekly</changefreq>
-        <priority>0.8</priority>
+        <priority>0.9</priority>
     </url>
 
     <url>
         <loc>https://pdftoolspro.com/tools/jpg-to-pdf</loc>
-        <lastmod>2024-01-20</lastmod>
+        <lastmod>2024-08-02</lastmod>
         <changefreq>weekly</changefreq>
-        <priority>0.8</priority>
+        <priority>0.9</priority>
     </url>
 
     <url>
         <loc>https://pdftoolspro.com/tools/png-to-pdf</loc>
-        <lastmod>2024-01-20</lastmod>
+        <lastmod>2024-08-02</lastmod>
         <changefreq>weekly</changefreq>
-        <priority>0.8</priority>
-    </url>
-
-    <url>
-        <loc>https://pdftoolspro.com/tools/lock-pdf</loc>
-        <lastmod>2024-01-20</lastmod>
-        <changefreq>weekly</changefreq>
-        <priority>0.8</priority>
+        <priority>0.9</priority>
     </url>
 
     <url>
         <loc>https://pdftoolspro.com/tools/word-to-pdf</loc>
-        <lastmod>2024-01-20</lastmod>
+        <lastmod>2024-08-02</lastmod>
         <changefreq>weekly</changefreq>
-        <priority>0.8</priority>
+        <priority>0.9</priority>
+    </url>
+
+    <!-- Security & Utility Tools -->
+    <url>
+        <loc>https://pdftoolspro.com/tools/lock-pdf</loc>
+        <lastmod>2024-08-02</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.85</priority>
     </url>
 
     <url>
         <loc>https://pdftoolspro.com/tools/pdf-reader</loc>
-        <lastmod>2024-01-20</lastmod>
+        <lastmod>2024-08-02</lastmod>
         <changefreq>weekly</changefreq>
-        <priority>0.7</priority>
+        <priority>0.8</priority>
     </url>
 
     <url>
         <loc>https://pdftoolspro.com/tools/jpg-compress</loc>
-        <lastmod>2024-01-20</lastmod>
+        <lastmod>2024-08-02</lastmod>
         <changefreq>weekly</changefreq>
-        <priority>0.7</priority>
+        <priority>0.8</priority>
     </url>
 
-    <!-- Blog -->
+    <!-- Blog Section -->
     <url>
         <loc>https://pdftoolspro.com/blog</loc>
-        <lastmod>2024-01-20</lastmod>
+        <lastmod>2024-08-02</lastmod>
         <changefreq>daily</changefreq>
+        <priority>0.85</priority>
+    </url>
+
+    <!-- Blog Articles (High-Value SEO Content) -->
+    <url>
+        <loc>https://pdftoolspro.com/blog/how-to-convert-pdf-to-word-free</loc>
+        <lastmod>2024-08-02</lastmod>
+        <changefreq>weekly</changefreq>
         <priority>0.8</priority>
+    </url>
+
+    <url>
+        <loc>https://pdftoolspro.com/blog/best-pdf-compression-techniques</loc>
+        <lastmod>2024-08-02</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+    </url>
+
+    <url>
+        <loc>https://pdftoolspro.com/blog/smallpdf-vs-ilovepdf-vs-pdftoolspro</loc>
+        <lastmod>2024-08-02</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+    </url>
+
+    <url>
+        <loc>https://pdftoolspro.com/blog/pdf-security-best-practices</loc>
+        <lastmod>2024-08-02</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.75</priority>
+    </url>
+
+    <url>
+        <loc>https://pdftoolspro.com/blog/merge-pdfs-like-a-pro</loc>
+        <lastmod>2024-08-02</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.75</priority>
     </url>
 
     <!-- Static Pages -->
     <url>
         <loc>https://pdftoolspro.com/about</loc>
-        <lastmod>2024-01-20</lastmod>
+        <lastmod>2024-08-02</lastmod>
         <changefreq>monthly</changefreq>
-        <priority>0.5</priority>
+        <priority>0.6</priority>
     </url>
 
     <url>
         <loc>https://pdftoolspro.com/privacy</loc>
-        <lastmod>2024-01-20</lastmod>
+        <lastmod>2024-08-02</lastmod>
         <changefreq>monthly</changefreq>
-        <priority>0.4</priority>
+        <priority>0.5</priority>
     </url>
 
     <url>
         <loc>https://pdftoolspro.com/terms</loc>
-        <lastmod>2024-01-20</lastmod>
+        <lastmod>2024-08-02</lastmod>
         <changefreq>monthly</changefreq>
-        <priority>0.4</priority>
+        <priority>0.5</priority>
     </url>
 
     <url>
         <loc>https://pdftoolspro.com/contact</loc>
-        <lastmod>2024-01-20</lastmod>
+        <lastmod>2024-08-02</lastmod>
         <changefreq>monthly</changefreq>
-        <priority>0.5</priority>
+        <priority>0.6</priority>
+    </url>
+
+    <!-- Help & FAQ Pages -->
+    <url>
+        <loc>https://pdftoolspro.com/help</loc>
+        <lastmod>2024-08-02</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+    </url>
+
+    <url>
+        <loc>https://pdftoolspro.com/faq</loc>
+        <lastmod>2024-08-02</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
     </url>
 
 </urlset>

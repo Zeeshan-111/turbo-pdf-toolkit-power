@@ -1,26 +1,41 @@
 
-# Robots.txt for PDF Tools Pro - Optimized for SEO
+# Robots.txt for PDF Tools Pro - Optimized for Maximum Crawling
 User-agent: *
 Allow: /
+Crawl-delay: 1
 
-# Disallow admin and private areas
+# Priority pages for crawling
+Allow: /tools/
+Allow: /blog/
+Allow: /
+Allow: /sitemap.xml
+
+# Disallow admin and private areas only
 Disallow: /admin/
 Disallow: /private/
 Disallow: /tmp/
+Disallow: /api/
 Disallow: /*.pdf$
+Disallow: /404
+Disallow: /*?
+Disallow: /*#
 
-# Allow important crawlers
+# Allow all major search engines
 User-agent: Googlebot
 Allow: /
+Crawl-delay: 1
 
 User-agent: Bingbot
 Allow: /
+Crawl-delay: 1
 
 User-agent: Slurp
 Allow: /
+Crawl-delay: 1
 
 User-agent: DuckDuckBot
 Allow: /
+Crawl-delay: 1
 
 User-agent: facebookexternalhit
 Allow: /
@@ -31,7 +46,13 @@ Allow: /
 User-agent: LinkedInBot
 Allow: /
 
-# Block bad bots
+User-agent: WhatsApp
+Allow: /
+
+User-agent: TelegramBot
+Allow: /
+
+# Block harmful bots
 User-agent: AhrefsBot
 Disallow: /
 
@@ -41,11 +62,16 @@ Disallow: /
 User-agent: DotBot
 Disallow: /
 
-# Sitemap location
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MauiBot
+Disallow: /
+
+# Sitemap location (most important)
 Sitemap: https://pdftoolspro.com/sitemap.xml
 
-# Crawl delay for better server performance
-Crawl-delay: 1
-
-# Cache policy
-Cache-Control: max-age=86400
+# Additional sitemaps for different content types
+Sitemap: https://pdftoolspro.com/sitemap-tools.xml
+Sitemap: https://pdftoolspro.com/sitemap-blog.xml
+Sitemap: https://pdftoolspro.com/sitemap-images.xml

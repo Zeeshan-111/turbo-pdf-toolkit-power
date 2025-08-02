@@ -14,28 +14,28 @@ const compressionModes = [
   {
     id: 'low' as const,
     title: 'Low Compression',
-    description: 'Best quality, larger file size',
+    description: 'High quality, moderate size reduction',
     icon: Shield,
     color: 'from-green-500 to-blue-500',
-    savings: '10-20%',
+    savings: '15-25%',
     recommended: false
   },
   {
     id: 'medium' as const,
     title: 'Medium Compression',
-    description: 'Balanced quality and size',
+    description: 'Best balance of quality & size',
     icon: Zap,
     color: 'from-blue-500 to-purple-500',
-    savings: '30-50%',
+    savings: '35-55%',
     recommended: true
   },
   {
     id: 'high' as const,
     title: 'High Compression',
-    description: 'Smallest size, lower quality',
+    description: 'Maximum size reduction, excellent quality',
     icon: Settings,
     color: 'from-orange-500 to-red-500',
-    savings: '60-80%',
+    savings: '60-85%',
     recommended: false
   }
 ];

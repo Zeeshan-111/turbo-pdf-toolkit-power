@@ -230,9 +230,7 @@ const Index = () => {
             <h2 className="text-3xl md:text-4xl font-bold mb-6">
               Why Choose PDF Tools Pro Over Competitors?
             </h2>
-            <p className="text-xl text-gray-300 mb-12">
-              Compare us with SmallPDF, iLovePDF, and other PDF tools
-            </p>
+            <p className="text-xl text-gray-300 mb-12">Compare us with other PDF tools</p>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="bg-gray-800 p-8 rounded-lg border border-green-500/20">

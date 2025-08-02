@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, FileText, Zap, Shield, Brain, Star, Users, CheckCircle } from "lucide-react";
@@ -10,7 +9,6 @@ import ToolCard from "@/components/ToolCard";
 import CustomerSuggestion from "@/components/CustomerSuggestion";
 import MetaTags from "@/components/SEO/MetaTags";
 import { generateWebsiteSchema, generateOrganizationSchema, generateFAQSchema } from "@/utils/structuredData";
-
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
@@ -21,151 +19,134 @@ const Index = () => {
   const seoKeywords = "PDF tools, convert PDF to Word, merge PDF, compress PDF, split PDF, PDF editor, free PDF converter, online PDF tools, PDF to JPG, SmallPDF alternative, iLovePDF alternative";
 
   // Structured data
-  const faqs = [
-    {
-      question: "Is PDF Tools Pro really free to use?",
-      answer: "Yes! All our PDF tools are completely free to use with no hidden fees, registration requirements, or file limits. We believe in providing accessible PDF solutions for everyone."
-    },
-    {
-      question: "Are my files secure and private?",
-      answer: "Absolutely. All file processing happens locally in your browser using advanced client-side technology. Your files never leave your device, ensuring maximum privacy and security."
-    },
-    {
-      question: "What file formats do you support?",
-      answer: "We support all major file formats including PDF, Word (DOC/DOCX), Excel (XLS/XLSX), PowerPoint (PPT/PPTX), JPG, PNG, and more. Our tools are constantly updated to support new formats."
-    },
-    {
-      question: "How does PDF Tools Pro compare to SmallPDF and iLovePDF?",
-      answer: "PDF Tools Pro offers superior compression algorithms, faster processing, better privacy (no server uploads), unlimited file sizes, and completely free access to all premium features without subscriptions."
-    },
-    {
-      question: "Can I process large PDF files?",
-      answer: "Yes! Unlike competitors that limit file sizes, PDF Tools Pro can handle files of any size. Our advanced compression algorithms work efficiently even with large documents."
-    }
-  ];
-
-  const structuredData = [
-    generateWebsiteSchema(),
-    generateOrganizationSchema(),
-    generateFAQSchema(faqs)
-  ];
-
-  const categories = [
-    { id: "all", name: "All Tools", icon: FileText, color: "from-blue-500 to-purple-600" },
-    { id: "conversion", name: "Conversion", icon: Zap, color: "from-green-500 to-blue-500" },
-    { id: "editing", name: "Editing", icon: FileText, color: "from-orange-500 to-red-500" },
-    { id: "security", name: "Security", icon: Shield, color: "from-purple-500 to-pink-500" },
-    { id: "utilities", name: "Utilities", icon: Brain, color: "from-cyan-500 to-blue-500" }
-  ];
-
-  const tools = [
-    {
-      id: "pdf-to-word",
-      title: "PDF to Word Converter",
-      description: "Convert PDF files to editable Word documents with perfect formatting preservation",
-      category: "conversion",
-      route: "/tools/pdf-to-word",
-      popular: true
-    },
-    {
-      id: "merge-pdf",
-      title: "Merge PDF Files",
-      description: "Combine multiple PDF files into one document instantly and securely",
-      category: "editing",
-      route: "/tools/merge-pdf",
-      popular: true
-    },
-    {
-      id: "split-pdf",
-      title: "Split PDF Pages",
-      description: "Extract specific pages from PDF files or split into multiple documents",
-      category: "editing",
-      route: "/tools/split-pdf",
-      popular: true
-    },
-    {
-      id: "compress-pdf",
-      title: "Compress PDF Size",
-      description: "Reduce PDF file size by up to 90% while maintaining excellent quality",
-      category: "utilities",
-      route: "/tools/compress-pdf",
-      popular: true
-    },
-    {
-      id: "jpg-compress",
-      title: "JPG Image Compressor",
-      description: "Reduce JPG image file sizes with smart compression technology",
-      category: "utilities",
-      route: "/tools/jpg-compress",
-      popular: true
-    },
-    {
-      id: "pdf-to-jpg",
-      title: "PDF to JPG Converter",
-      description: "Convert PDF pages to high-quality JPG images in seconds",
-      category: "conversion",
-      route: "/tools/pdf-to-jpg"
-    },
-    {
-      id: "pdf-to-png",
-      title: "PDF to PNG Converter",
-      description: "Convert PDF pages to PNG images with transparent backgrounds",
-      category: "conversion",
-      route: "/tools/pdf-to-png"
-    },
-    {
-      id: "jpg-to-pdf",
-      title: "JPG to PDF Converter",
-      description: "Convert JPG images to PDF documents with custom layouts",
-      category: "conversion",
-      route: "/tools/jpg-to-pdf"
-    },
-    {
-      id: "png-to-pdf",
-      title: "PNG to PDF Converter",
-      description: "Convert PNG images to PDF with transparency support",
-      category: "conversion",
-      route: "/tools/png-to-pdf"
-    },
-    {
-      id: "lock-pdf",
-      title: "Password Protect PDF",
-      description: "Add password protection and encryption to secure your PDF files",
-      category: "security",
-      route: "/tools/lock-pdf"
-    },
-    {
-      id: "word-to-pdf",
-      title: "Word to PDF Converter",
-      description: "Convert Word documents to PDF format with perfect layout preservation",
-      category: "conversion",
-      route: "/tools/word-to-pdf"
-    },
-    {
-      id: "pdf-reader",
-      title: "Online PDF Reader",
-      description: "View and read PDF files online without downloading software",
-      category: "utilities",
-      route: "/tools/pdf-reader"
-    }
-  ];
-
+  const faqs = [{
+    question: "Is PDF Tools Pro really free to use?",
+    answer: "Yes! All our PDF tools are completely free to use with no hidden fees, registration requirements, or file limits. We believe in providing accessible PDF solutions for everyone."
+  }, {
+    question: "Are my files secure and private?",
+    answer: "Absolutely. All file processing happens locally in your browser using advanced client-side technology. Your files never leave your device, ensuring maximum privacy and security."
+  }, {
+    question: "What file formats do you support?",
+    answer: "We support all major file formats including PDF, Word (DOC/DOCX), Excel (XLS/XLSX), PowerPoint (PPT/PPTX), JPG, PNG, and more. Our tools are constantly updated to support new formats."
+  }, {
+    question: "How does PDF Tools Pro compare to SmallPDF and iLovePDF?",
+    answer: "PDF Tools Pro offers superior compression algorithms, faster processing, better privacy (no server uploads), unlimited file sizes, and completely free access to all premium features without subscriptions."
+  }, {
+    question: "Can I process large PDF files?",
+    answer: "Yes! Unlike competitors that limit file sizes, PDF Tools Pro can handle files of any size. Our advanced compression algorithms work efficiently even with large documents."
+  }];
+  const structuredData = [generateWebsiteSchema(), generateOrganizationSchema(), generateFAQSchema(faqs)];
+  const categories = [{
+    id: "all",
+    name: "All Tools",
+    icon: FileText,
+    color: "from-blue-500 to-purple-600"
+  }, {
+    id: "conversion",
+    name: "Conversion",
+    icon: Zap,
+    color: "from-green-500 to-blue-500"
+  }, {
+    id: "editing",
+    name: "Editing",
+    icon: FileText,
+    color: "from-orange-500 to-red-500"
+  }, {
+    id: "security",
+    name: "Security",
+    icon: Shield,
+    color: "from-purple-500 to-pink-500"
+  }, {
+    id: "utilities",
+    name: "Utilities",
+    icon: Brain,
+    color: "from-cyan-500 to-blue-500"
+  }];
+  const tools = [{
+    id: "pdf-to-word",
+    title: "PDF to Word Converter",
+    description: "Convert PDF files to editable Word documents with perfect formatting preservation",
+    category: "conversion",
+    route: "/tools/pdf-to-word",
+    popular: true
+  }, {
+    id: "merge-pdf",
+    title: "Merge PDF Files",
+    description: "Combine multiple PDF files into one document instantly and securely",
+    category: "editing",
+    route: "/tools/merge-pdf",
+    popular: true
+  }, {
+    id: "split-pdf",
+    title: "Split PDF Pages",
+    description: "Extract specific pages from PDF files or split into multiple documents",
+    category: "editing",
+    route: "/tools/split-pdf",
+    popular: true
+  }, {
+    id: "compress-pdf",
+    title: "Compress PDF Size",
+    description: "Reduce PDF file size by up to 90% while maintaining excellent quality",
+    category: "utilities",
+    route: "/tools/compress-pdf",
+    popular: true
+  }, {
+    id: "jpg-compress",
+    title: "JPG Image Compressor",
+    description: "Reduce JPG image file sizes with smart compression technology",
+    category: "utilities",
+    route: "/tools/jpg-compress",
+    popular: true
+  }, {
+    id: "pdf-to-jpg",
+    title: "PDF to JPG Converter",
+    description: "Convert PDF pages to high-quality JPG images in seconds",
+    category: "conversion",
+    route: "/tools/pdf-to-jpg"
+  }, {
+    id: "pdf-to-png",
+    title: "PDF to PNG Converter",
+    description: "Convert PDF pages to PNG images with transparent backgrounds",
+    category: "conversion",
+    route: "/tools/pdf-to-png"
+  }, {
+    id: "jpg-to-pdf",
+    title: "JPG to PDF Converter",
+    description: "Convert JPG images to PDF documents with custom layouts",
+    category: "conversion",
+    route: "/tools/jpg-to-pdf"
+  }, {
+    id: "png-to-pdf",
+    title: "PNG to PDF Converter",
+    description: "Convert PNG images to PDF with transparency support",
+    category: "conversion",
+    route: "/tools/png-to-pdf"
+  }, {
+    id: "lock-pdf",
+    title: "Password Protect PDF",
+    description: "Add password protection and encryption to secure your PDF files",
+    category: "security",
+    route: "/tools/lock-pdf"
+  }, {
+    id: "word-to-pdf",
+    title: "Word to PDF Converter",
+    description: "Convert Word documents to PDF format with perfect layout preservation",
+    category: "conversion",
+    route: "/tools/word-to-pdf"
+  }, {
+    id: "pdf-reader",
+    title: "Online PDF Reader",
+    description: "View and read PDF files online without downloading software",
+    category: "utilities",
+    route: "/tools/pdf-reader"
+  }];
   const filteredTools = tools.filter(tool => {
     const matchesCategory = activeCategory === "all" || tool.category === activeCategory;
-    const matchesSearch = tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         tool.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = tool.title.toLowerCase().includes(searchQuery.toLowerCase()) || tool.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
-
-  return (
-    <>
-      <MetaTags
-        title={seoTitle}
-        description={seoDescription}
-        keywords={seoKeywords}
-        canonicalUrl="https://pdftoolspro.com/"
-        structuredData={structuredData}
-      />
+  return <>
+      <MetaTags title={seoTitle} description={seoDescription} keywords={seoKeywords} canonicalUrl="https://pdftoolspro.com/" structuredData={structuredData} />
       
       <div className="min-h-screen bg-gray-900 text-white">
         <Header />
@@ -201,11 +182,9 @@ const Index = () => {
               </div>
             </div>
             
-            <Button 
-              size="lg" 
-              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3 text-lg animate-scale-in"
-              onClick={() => document.getElementById('tools')?.scrollIntoView({ behavior: 'smooth' })}
-            >
+            <Button size="lg" className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-3 text-lg animate-scale-in" onClick={() => document.getElementById('tools')?.scrollIntoView({
+            behavior: 'smooth'
+          })}>
               Start Using Free Tools
             </Button>
           </div>
@@ -222,50 +201,26 @@ const Index = () => {
             <div className="mb-8">
               <div className="relative max-w-md mx-auto mb-8">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  type="text"
-                  placeholder="Search PDF tools..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:border-blue-500"
-                />
+                <Input type="text" placeholder="Search PDF tools..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:border-blue-500" />
               </div>
 
               {/* Category Filters */}
               <div className="flex flex-wrap justify-center gap-4">
-                {categories.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => setActiveCategory(category.id)}
-                    className={`px-6 py-3 rounded-full font-medium transition-all duration-300 ${
-                      activeCategory === category.id
-                        ? `bg-gradient-to-r ${category.color} text-white shadow-lg transform scale-105`
-                        : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-                    }`}
-                  >
+                {categories.map(category => <button key={category.id} onClick={() => setActiveCategory(category.id)} className={`px-6 py-3 rounded-full font-medium transition-all duration-300 ${activeCategory === category.id ? `bg-gradient-to-r ${category.color} text-white shadow-lg transform scale-105` : "bg-gray-800 text-gray-300 hover:bg-gray-700"}`}>
                     <category.icon className="w-4 h-4 inline mr-2" />
                     {category.name}
-                  </button>
-                ))}
+                  </button>)}
               </div>
             </div>
 
             {/* Tools Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredTools.map((tool, index) => (
-                <ToolCard
-                  key={tool.id}
-                  tool={tool}
-                  index={index}
-                />
-              ))}
+              {filteredTools.map((tool, index) => <ToolCard key={tool.id} tool={tool} index={index} />)}
             </div>
 
-            {filteredTools.length === 0 && (
-              <div className="text-center py-12">
+            {filteredTools.length === 0 && <div className="text-center py-12">
                 <p className="text-gray-400 text-lg">No tools found matching your search.</p>
-              </div>
-            )}
+              </div>}
           </div>
         </section>
 
@@ -306,27 +261,9 @@ const Index = () => {
                 </ul>
               </div>
               
-              <div className="bg-gray-800 p-8 rounded-lg">
-                <h3 className="text-2xl font-bold text-gray-400 mb-4">SmallPDF</h3>
-                <ul className="space-y-3 text-left">
-                  <li className="text-gray-400">❌ Limited free usage</li>
-                  <li className="text-gray-400">❌ File size restrictions</li>
-                  <li className="text-gray-400">❌ Server-side processing</li>
-                  <li className="text-gray-400">❌ Premium subscription required</li>
-                  <li className="text-gray-400">❌ Account registration needed</li>
-                </ul>
-              </div>
               
-              <div className="bg-gray-800 p-8 rounded-lg">
-                <h3 className="text-2xl font-bold text-gray-400 mb-4">iLovePDF</h3>
-                <ul className="space-y-3 text-left">
-                  <li className="text-gray-400">❌ Limited free tasks</li>
-                  <li className="text-gray-400">❌ Watermarks on output</li>
-                  <li className="text-gray-400">❌ Files uploaded to servers</li>
-                  <li className="text-gray-400">❌ Slower processing</li>
-                  <li className="text-gray-400">❌ Ads and distractions</li>
-                </ul>
-              </div>
+              
+              
             </div>
           </div>
         </section>
@@ -364,12 +301,10 @@ const Index = () => {
               Frequently Asked Questions
             </h2>
             <div className="space-y-6">
-              {faqs.map((faq, index) => (
-                <div key={index} className="bg-gray-800 rounded-lg p-6">
+              {faqs.map((faq, index) => <div key={index} className="bg-gray-800 rounded-lg p-6">
                   <h3 className="text-xl font-semibold mb-3 text-blue-400">{faq.question}</h3>
                   <p className="text-gray-300 leading-relaxed">{faq.answer}</p>
-                </div>
-              ))}
+                </div>)}
             </div>
           </div>
         </section>
@@ -379,8 +314,6 @@ const Index = () => {
 
         <Footer />
       </div>
-    </>
-  );
+    </>;
 };
-
 export default Index;

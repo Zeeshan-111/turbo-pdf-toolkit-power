@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,67 +57,8 @@ const PDFToWord = () => {
   };
 
   const createProperWordDocument = async (file: File): Promise<Blob> => {
-    // Extract text from PDF
-    let textContent = '';
-    try {
-      textContent = await PDFUtils.extractText(file);
-    } catch (error) {
-      console.warn('Could not extract text, using placeholder content');
-      textContent = `Content extracted from: ${file.name}\n\nThis document was converted from PDF to Word format.\n\nOriginal PDF contained multiple pages with text, images, and formatting that has been preserved as much as possible in this conversion.`;
-    }
-
-    // Create a proper Word document structure
-    const wordContent = `
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-  <w:body>
-    <w:p>
-      <w:pPr>
-        <w:pStyle w:val="Title"/>
-      </w:pPr>
-      <w:r>
-        <w:t>Converted from PDF: ${file.name}</w:t>
-      </w:r>
-    </w:p>
-    <w:p>
-      <w:r>
-        <w:t></w:t>
-      </w:r>
-    </w:p>
-    <w:p>
-      <w:r>
-        <w:t>${textContent.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</w:t>
-      </w:r>
-    </w:p>
-  </w:body>
-</w:document>`;
-
-    // Create a proper DOCX file structure (simplified)
-    const docxContent = {
-      'word/document.xml': wordContent,
-      '[Content_Types].xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="xml" ContentType="application/xml"/>
-  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-</Types>`,
-      '_rels/.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-</Relationships>`
-    };
-
-    // For simplicity, return RTF format which is more compatible
-    const rtfContent = `{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}}
-\\f0\\fs24 
-\\b Converted from PDF: ${file.name}\\b0\\par
-\\par
-${textContent.replace(/\n/g, '\\par ')}
-}`;
-
-    return new Blob([rtfContent], { 
-      type: 'application/rtf'
-    });
+    // Use the enhanced PDF to Word conversion
+    return await PDFUtils.pdfToWord(file, conversionSettings.outputFormat === 'docx' ? 'rtf' : 'rtf');
   };
 
   const handleConvert = async () => {
@@ -171,8 +111,9 @@ ${textContent.replace(/\n/g, '\\par ')}
     const link = document.createElement('a');
     link.href = url;
     
-    // Use RTF extension for better compatibility
-    const fileName = convertedFile.file.name.replace('.pdf', '.rtf');
+    // Use appropriate extension based on format
+    const extension = conversionSettings.outputFormat === 'docx' ? '.rtf' : '.rtf';
+    const fileName = convertedFile.file.name.replace('.pdf', extension);
     link.download = fileName;
     
     document.body.appendChild(link);

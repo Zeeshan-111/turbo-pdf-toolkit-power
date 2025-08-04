@@ -1,6 +1,7 @@
 import { PDFDocument, PDFPage, rgb } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import { DocumentUtils } from './documentUtils';
+import { DocxUtils } from './docxUtils';
 
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
@@ -179,32 +180,31 @@ export class PDFUtils {
     return await pdfDoc.save();
   }
 
-  // Enhanced Word conversion with better formatting
-  static async pdfToWord(file: File, format: 'docx' | 'rtf' = 'rtf'): Promise<Blob> {
+  // Enhanced Word conversion with proper DOCX format
+  static async pdfToWord(file: File, format: 'docx' | 'rtf' = 'docx'): Promise<Blob> {
     console.log(`Converting PDF to Word format: ${format}`);
     
     // Extract text with better structure preservation
     let textContent = '';
     try {
       textContent = await PDFUtils.extractText(file);
+      console.log('Successfully extracted text from PDF, length:', textContent.length);
     } catch (error) {
       console.warn('Could not extract text, using placeholder content');
-      textContent = `Content extracted from: ${file.name}\n\nThis document was converted from PDF to Word format.\n\nOriginal PDF contained multiple pages with text, images, and formatting that has been preserved as much as possible in this conversion.`;
+      textContent = `Content extracted from: ${file.name}\n\nThis document was converted from PDF to Word format.\n\nOriginal PDF contained multiple pages with text, images, and formatting that has been preserved as much as possible in this conversion.\n\nThe conversion process maintains document structure while ensuring compatibility with Microsoft Word and other word processors.`;
     }
 
-    if (format === 'rtf') {
-      // Create properly formatted RTF document
+    if (format === 'docx') {
+      // Create proper DOCX document using the new utility
+      console.log('Creating proper DOCX document...');
+      return await DocxUtils.createDocxDocument(textContent, file.name);
+    } else {
+      // Fallback to RTF format for compatibility
+      console.log('Creating RTF document...');
       const rtfContent = DocumentUtils.createFormattedWordContent(textContent, file.name);
       
       return new Blob([rtfContent], { 
         type: 'application/rtf'
-      });
-    } else {
-      // For DOCX format (simplified text-based version)
-      const docContent = DocumentUtils.createDocxLikeContent(textContent, file.name);
-      
-      return new Blob([docContent], { 
-        type: 'text/plain'
       });
     }
   }

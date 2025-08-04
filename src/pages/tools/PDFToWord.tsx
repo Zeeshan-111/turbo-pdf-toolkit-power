@@ -57,8 +57,9 @@ const PDFToWord = () => {
   };
 
   const createProperWordDocument = async (file: File): Promise<Blob> => {
-    // Use the enhanced PDF to Word conversion
-    return await PDFUtils.pdfToWord(file, conversionSettings.outputFormat === 'docx' ? 'rtf' : 'rtf');
+    // Use proper DOCX conversion
+    console.log('Creating proper Microsoft Word document...');
+    return await PDFUtils.pdfToWord(file, 'docx');
   };
 
   const handleConvert = async () => {
@@ -111,9 +112,8 @@ const PDFToWord = () => {
     const link = document.createElement('a');
     link.href = url;
     
-    // Use appropriate extension based on format
-    const extension = conversionSettings.outputFormat === 'docx' ? '.rtf' : '.rtf';
-    const fileName = convertedFile.file.name.replace('.pdf', extension);
+    // Use proper DOCX extension
+    const fileName = convertedFile.file.name.replace('.pdf', '.docx');
     link.download = fileName;
     
     document.body.appendChild(link);
@@ -150,7 +150,7 @@ const PDFToWord = () => {
             PDF to Word Converter
           </h1>
           <p className="text-gray-300 text-lg">
-            Convert PDF documents to editable Word format with high accuracy
+            Convert PDF documents to Microsoft Word format (.docx) with professional formatting
           </p>
         </div>
 
@@ -220,12 +220,12 @@ const PDFToWord = () => {
                     {isConverting ? (
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Converting {files.length} PDF{files.length > 1 ? 's' : ''}...
+                        Converting to DOCX...
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
                         <FileText className="w-5 h-5" />
-                        Convert to Word ({files.length} file{files.length > 1 ? 's' : ''})
+                        Convert to Word DOCX ({files.length} file{files.length > 1 ? 's' : ''})
                       </div>
                     )}
                   </Button>
@@ -248,7 +248,7 @@ const PDFToWord = () => {
                 <CardHeader>
                   <CardTitle className="text-white flex items-center gap-2">
                     <CheckCircle2 className="w-5 h-5 text-green-400" />
-                    Conversion Complete
+                    Conversion Complete - Microsoft Word Format
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -279,10 +279,10 @@ const PDFToWord = () => {
                       <div key={index} className="flex items-center justify-between p-3 bg-gray-700 rounded-lg">
                         <div>
                           <p className="font-medium text-white">
-                            {convertedFile.file.name.replace('.pdf', '.rtf')}
+                            {convertedFile.file.name.replace('.pdf', '.docx')}
                           </p>
                           <p className="text-sm text-gray-400">
-                            {convertedFile.pages} pages • {formatFileSize(convertedFile.blob.size)} • RTF Format
+                            {convertedFile.pages} pages • {formatFileSize(convertedFile.blob.size)} • Microsoft Word DOCX
                           </p>
                         </div>
                         <Button
@@ -314,10 +314,11 @@ const PDFToWord = () => {
                 <CardTitle className="text-white text-sm">Conversion Info</CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-gray-300 space-y-2">
-                <p>• Converts PDF to RTF format for maximum compatibility</p>
-                <p>• Preserves text content and basic formatting</p>
-                <p>• Works with both text-based and scanned PDFs</p>
-                <p>• Files can be opened in Microsoft Word, Google Docs, etc.</p>
+                <p>• Converts PDF to Microsoft Word DOCX format</p>
+                <p>• Professional formatting with proper paragraphs and headings</p>
+                <p>• Maintains document structure and text hierarchy</p>
+                <p>• Compatible with Microsoft Word, Google Docs, and LibreOffice</p>
+                <p>• Preserves text content with improved readability</p>
               </CardContent>
             </Card>
           </div>

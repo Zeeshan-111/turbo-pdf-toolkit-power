@@ -180,9 +180,13 @@ export class PDFUtils {
     return await pdfDoc.save();
   }
 
-  // Enhanced Word conversion with proper DOCX format
+  // Enhanced Word conversion with proper DOCX format and page breaks
   static async pdfToWord(file: File, format: 'docx' | 'rtf' = 'docx'): Promise<Blob> {
     console.log(`Converting PDF to Word format: ${format}`);
+    
+    // Get page count first
+    const pageCount = await PDFUtils.getPageCount(file);
+    console.log(`PDF has ${pageCount} pages`);
     
     // Extract text with better structure preservation
     let textContent = '';
@@ -195,9 +199,9 @@ export class PDFUtils {
     }
 
     if (format === 'docx') {
-      // Create proper DOCX document using the new utility
-      console.log('Creating proper DOCX document...');
-      return await DocxUtils.createDocxDocument(textContent, file.name);
+      // Create proper DOCX document with page breaks
+      console.log('Creating proper DOCX document with page breaks...');
+      return await DocxUtils.createDocxDocument(textContent, file.name, pageCount);
     } else {
       // Fallback to RTF format for compatibility
       console.log('Creating RTF document...');

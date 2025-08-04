@@ -1,11 +1,10 @@
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, convertInchesToTwip } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, convertInchesToTwip, PageBreak } from 'docx';
 
 export class DocxUtils {
-  // Create proper DOCX document from PDF text
-  static async createDocxDocument(textContent: string, fileName: string): Promise<Blob> {
-    console.log('Creating proper DOCX document from PDF content');
+  // Create proper DOCX document from PDF text with page breaks
+  static async createDocxDocument(textContent: string, fileName: string, pageCount: number = 1): Promise<Blob> {
+    console.log('Creating proper DOCX document from PDF content with page breaks');
     
-    const paragraphs = this.processTextContent(textContent);
     const documentParagraphs: Paragraph[] = [];
     
     // Add document title
@@ -26,73 +25,108 @@ export class DocxUtils {
       })
     );
     
-    // Process each paragraph
-    paragraphs.forEach((paragraphText, index) => {
-      if (!paragraphText.trim()) return;
-      
-      const isHeading = this.isHeading(paragraphText);
-      const isSubheading = this.isSubheading(paragraphText);
-      
-      if (isHeading) {
-        // Main heading
+    // Process text content by estimated pages
+    const pageTexts = this.splitTextByPages(textContent, pageCount);
+    
+    pageTexts.forEach((pageText, pageIndex) => {
+      // Add page break before each new page (except first page)
+      if (pageIndex > 0) {
         documentParagraphs.push(
           new Paragraph({
-            children: [
-              new TextRun({
-                text: paragraphText.trim(),
-                bold: true,
-                size: 28, // 14pt
-                color: "1F497D",
-              }),
-            ],
-            heading: HeadingLevel.HEADING_1,
-            spacing: {
-              before: 240,
-              after: 120,
-            },
-          })
-        );
-      } else if (isSubheading) {
-        // Subheading
-        documentParagraphs.push(
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: paragraphText.trim(),
-                bold: true,
-                size: 24, // 12pt
-                color: "365F91",
-              }),
-            ],
-            heading: HeadingLevel.HEADING_2,
-            spacing: {
-              before: 200,
-              after: 100,
-            },
-          })
-        );
-      } else {
-        // Regular paragraph
-        const formattedText = this.formatTextRuns(paragraphText.trim());
-        
-        documentParagraphs.push(
-          new Paragraph({
-            children: formattedText,
-            spacing: {
-              after: 120,
-              line: 276, // 1.15 line spacing
-            },
-            alignment: AlignmentType.JUSTIFIED,
+            children: [new PageBreak()],
           })
         );
       }
+      
+      // Add page header if multiple pages
+      if (pageTexts.length > 1) {
+        documentParagraphs.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `Page ${pageIndex + 1}`,
+                bold: true,
+                size: 20,
+                color: "666666",
+              }),
+            ],
+            spacing: {
+              after: 200,
+            },
+          })
+        );
+      }
+      
+      // Process paragraphs for this page
+      const paragraphs = this.processTextContent(pageText);
+      
+      paragraphs.forEach((paragraphText) => {
+        if (!paragraphText.trim()) return;
+        
+        const isHeading = this.isHeading(paragraphText);
+        const isSubheading = this.isSubheading(paragraphText);
+        
+        if (isHeading) {
+          // Main heading
+          documentParagraphs.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: paragraphText.trim(),
+                  bold: true,
+                  size: 28, // 14pt
+                  color: "1F497D",
+                }),
+              ],
+              heading: HeadingLevel.HEADING_1,
+              spacing: {
+                before: 240,
+                after: 120,
+              },
+            })
+          );
+        } else if (isSubheading) {
+          // Subheading
+          documentParagraphs.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: paragraphText.trim(),
+                  bold: true,
+                  size: 24, // 12pt
+                  color: "365F91",
+                }),
+              ],
+              heading: HeadingLevel.HEADING_2,
+              spacing: {
+                before: 200,
+                after: 100,
+              },
+            })
+          );
+        } else {
+          // Regular paragraph
+          const formattedText = this.formatTextRuns(paragraphText.trim());
+          
+          documentParagraphs.push(
+            new Paragraph({
+              children: formattedText,
+              spacing: {
+                after: 120,
+                line: 276, // 1.15 line spacing
+              },
+              alignment: AlignmentType.JUSTIFIED,
+            })
+          );
+        }
+      });
     });
     
     // Create the document
     const doc = new Document({
       creator: "PDF Converter Tool",
       title: `Converted from ${fileName}`,
-      description: "PDF converted to Word document",
+      description: "PDF converted to Word document with page breaks",
       styles: {
         default: {
           document: {
@@ -146,9 +180,62 @@ export class DocxUtils {
     // Generate the DOCX file using browser-compatible method
     const blob = await Packer.toBlob(doc);
     
-    console.log('DOCX document created successfully, size:', blob.size, 'bytes');
+    console.log('DOCX document created successfully with page breaks, size:', blob.size, 'bytes');
     
     return blob;
+  }
+  
+  // Split text content by estimated pages
+  static splitTextByPages(text: string, pageCount: number): string[] {
+    if (pageCount <= 1) {
+      return [text];
+    }
+    
+    // Clean and normalize text
+    const cleanedText = text
+      .replace(/\s+/g, ' ')
+      .replace(/\n\s*\n\s*\n+/g, '\n\n')
+      .trim();
+    
+    // Split text roughly into equal parts based on page count
+    const textLength = cleanedText.length;
+    const avgPageLength = Math.floor(textLength / pageCount);
+    const pages: string[] = [];
+    
+    let currentPos = 0;
+    for (let i = 0; i < pageCount; i++) {
+      if (i === pageCount - 1) {
+        // Last page gets remaining content
+        pages.push(cleanedText.substring(currentPos));
+      } else {
+        // Find a good break point near the average page length
+        const targetPos = currentPos + avgPageLength;
+        let breakPos = targetPos;
+        
+        // Look for paragraph break within 200 characters
+        for (let j = targetPos - 100; j < targetPos + 100 && j < textLength; j++) {
+          if (cleanedText.substring(j, j + 2) === '\n\n') {
+            breakPos = j;
+            break;
+          }
+        }
+        
+        // If no paragraph break found, look for sentence end
+        if (breakPos === targetPos) {
+          for (let j = targetPos - 50; j < targetPos + 50 && j < textLength; j++) {
+            if (/[.!?]\s/.test(cleanedText.substring(j, j + 2))) {
+              breakPos = j + 1;
+              break;
+            }
+          }
+        }
+        
+        pages.push(cleanedText.substring(currentPos, breakPos).trim());
+        currentPos = breakPos;
+      }
+    }
+    
+    return pages.filter(page => page.length > 0);
   }
   
   // Process and clean text content

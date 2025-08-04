@@ -1,4 +1,3 @@
-
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, convertInchesToTwip } from 'docx';
 
 export class DocxUtils {
@@ -144,11 +143,12 @@ export class DocxUtils {
       ],
     });
     
-    // Generate the DOCX file
-    const buffer = await Packer.toBuffer(doc);
-    return new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    });
+    // Generate the DOCX file using browser-compatible method
+    const blob = await Packer.toBlob(doc);
+    
+    console.log('DOCX document created successfully, size:', blob.size, 'bytes');
+    
+    return blob;
   }
   
   // Process and clean text content

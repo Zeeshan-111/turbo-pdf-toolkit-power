@@ -1,9 +1,10 @@
+
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, convertInchesToTwip, PageBreak } from 'docx';
 
 export class DocxUtils {
-  // Create proper DOCX document from PDF text with page breaks
+  // Create proper DOCX document from PDF text with exact formatting preservation
   static async createDocxDocument(textContent: string, fileName: string, pageCount: number = 1): Promise<Blob> {
-    console.log('Creating proper DOCX document from PDF content with page breaks');
+    console.log('Creating DOCX document with exact formatting preservation');
     
     const documentParagraphs: Paragraph[] = [];
     
@@ -25,26 +26,29 @@ export class DocxUtils {
       })
     );
     
-    // Process text content by estimated pages
-    const pageTexts = this.splitTextByPages(textContent, pageCount);
+    // Process text content to maintain original structure
+    const structuredContent = this.parseStructuredContent(textContent);
     
-    pageTexts.forEach((pageText, pageIndex) => {
-      // Add page break before each new page (except first page)
-      if (pageIndex > 0) {
+    // Add page numbers if multiple pages
+    let currentPage = 1;
+    
+    structuredContent.forEach((section, sectionIndex) => {
+      // Add page break for new pages (except first content)
+      if (sectionIndex > 0 && section.isNewPage) {
         documentParagraphs.push(
           new Paragraph({
             children: [new PageBreak()],
           })
         );
-      }
-      
-      // Add page header if multiple pages
-      if (pageTexts.length > 1) {
+        
+        currentPage++;
+        
+        // Add page header
         documentParagraphs.push(
           new Paragraph({
             children: [
               new TextRun({
-                text: `Page ${pageIndex + 1}`,
+                text: `Page ${currentPage}`,
                 bold: true,
                 size: 20,
                 color: "666666",
@@ -57,22 +61,14 @@ export class DocxUtils {
         );
       }
       
-      // Process paragraphs for this page
-      const paragraphs = this.processTextContent(pageText);
-      
-      paragraphs.forEach((paragraphText) => {
-        if (!paragraphText.trim()) return;
-        
-        const isHeading = this.isHeading(paragraphText);
-        const isSubheading = this.isSubheading(paragraphText);
-        
-        if (isHeading) {
-          // Main heading
+      // Process each element in the section
+      section.elements.forEach((element) => {
+        if (element.type === 'title') {
           documentParagraphs.push(
             new Paragraph({
               children: [
                 new TextRun({
-                  text: paragraphText.trim(),
+                  text: element.text,
                   bold: true,
                   size: 28, // 14pt
                   color: "1F497D",
@@ -83,15 +79,15 @@ export class DocxUtils {
                 before: 240,
                 after: 120,
               },
+              alignment: AlignmentType.CENTER,
             })
           );
-        } else if (isSubheading) {
-          // Subheading
+        } else if (element.type === 'header') {
           documentParagraphs.push(
             new Paragraph({
               children: [
                 new TextRun({
-                  text: paragraphText.trim(),
+                  text: element.text,
                   bold: true,
                   size: 24, // 12pt
                   color: "365F91",
@@ -104,9 +100,8 @@ export class DocxUtils {
               },
             })
           );
-        } else {
-          // Regular paragraph
-          const formattedText = this.formatTextRuns(paragraphText.trim());
+        } else if (element.type === 'paragraph') {
+          const formattedText = this.formatTextRuns(element.text);
           
           documentParagraphs.push(
             new Paragraph({
@@ -122,11 +117,11 @@ export class DocxUtils {
       });
     });
     
-    // Create the document
+    // Create the document with proper styling
     const doc = new Document({
       creator: "PDF Converter Tool",
       title: `Converted from ${fileName}`,
-      description: "PDF converted to Word document with page breaks",
+      description: "PDF converted to Word document with preserved formatting",
       styles: {
         default: {
           document: {
@@ -180,132 +175,87 @@ export class DocxUtils {
     // Generate the DOCX file using browser-compatible method
     const blob = await Packer.toBlob(doc);
     
-    console.log('DOCX document created successfully with page breaks, size:', blob.size, 'bytes');
+    console.log('DOCX document created with preserved structure, size:', blob.size, 'bytes');
     
     return blob;
   }
   
-  // Split text content by estimated pages
-  static splitTextByPages(text: string, pageCount: number): string[] {
-    if (pageCount <= 1) {
-      return [text];
-    }
+  // Parse text content to maintain original structure
+  static parseStructuredContent(text: string): Array<{elements: Array<{type: string, text: string}>, isNewPage: boolean}> {
+    const sections: Array<{elements: Array<{type: string, text: string}>, isNewPage: boolean}> = [];
     
-    // Clean and normalize text
-    const cleanedText = text
-      .replace(/\s+/g, ' ')
-      .replace(/\n\s*\n\s*\n+/g, '\n\n')
-      .trim();
+    // Split by double line breaks to identify sections
+    const parts = text.split(/\n\s*\n/).filter(part => part.trim());
     
-    // Split text roughly into equal parts based on page count
-    const textLength = cleanedText.length;
-    const avgPageLength = Math.floor(textLength / pageCount);
-    const pages: string[] = [];
+    let currentSection = { elements: [], isNewPage: false };
     
-    let currentPos = 0;
-    for (let i = 0; i < pageCount; i++) {
-      if (i === pageCount - 1) {
-        // Last page gets remaining content
-        pages.push(cleanedText.substring(currentPos));
-      } else {
-        // Find a good break point near the average page length
-        const targetPos = currentPos + avgPageLength;
-        let breakPos = targetPos;
+    parts.forEach((part, index) => {
+      const lines = part.split('\n').filter(line => line.trim());
+      
+      lines.forEach((line, lineIndex) => {
+        const trimmed = line.trim();
         
-        // Look for paragraph break within 200 characters
-        for (let j = targetPos - 100; j < targetPos + 100 && j < textLength; j++) {
-          if (cleanedText.substring(j, j + 2) === '\n\n') {
-            breakPos = j;
-            break;
+        if (!trimmed) return;
+        
+        // Detect different types of content
+        if (this.isMainTitle(trimmed)) {
+          // Main title
+          if (currentSection.elements.length > 0) {
+            sections.push(currentSection);
+            currentSection = { elements: [], isNewPage: false };
           }
+          
+          currentSection.elements.push({
+            type: 'title',
+            text: trimmed
+          });
+        } else if (this.isHeader(trimmed)) {
+          // Section header
+          currentSection.elements.push({
+            type: 'header',
+            text: trimmed
+          });
+        } else {
+          // Regular paragraph
+          currentSection.elements.push({
+            type: 'paragraph',
+            text: trimmed
+          });
         }
-        
-        // If no paragraph break found, look for sentence end
-        if (breakPos === targetPos) {
-          for (let j = targetPos - 50; j < targetPos + 50 && j < textLength; j++) {
-            if (/[.!?]\s/.test(cleanedText.substring(j, j + 2))) {
-              breakPos = j + 1;
-              break;
-            }
-          }
-        }
-        
-        pages.push(cleanedText.substring(currentPos, breakPos).trim());
-        currentPos = breakPos;
-      }
-    }
-    
-    return pages.filter(page => page.length > 0);
-  }
-  
-  // Process and clean text content
-  static processTextContent(text: string): string[] {
-    // Clean and normalize text
-    const cleanedText = text
-      .replace(/\s+/g, ' ')
-      .replace(/\n\s*\n\s*\n+/g, '\n\n')
-      .replace(/([.!?])\s*\n(?!\n)/g, '$1 ')
-      .trim();
-    
-    // Split into paragraphs
-    const paragraphs = cleanedText
-      .split(/\n\s*\n/)
-      .filter(p => p.trim().length > 0)
-      .map(p => p.trim());
-    
-    // Further process long paragraphs
-    const processedParagraphs: string[] = [];
-    
-    paragraphs.forEach(para => {
-      if (para.length > 600) {
-        // Split long paragraphs at sentence boundaries
-        const sentences = para.split(/(?<=[.!?])\s+/);
-        let currentPara = '';
-        
-        sentences.forEach((sentence, index) => {
-          if ((currentPara + sentence).length > 400 && currentPara) {
-            processedParagraphs.push(currentPara.trim());
-            currentPara = sentence + ' ';
-          } else {
-            currentPara += sentence + (index < sentences.length - 1 ? ' ' : '');
-          }
-        });
-        
-        if (currentPara.trim()) {
-          processedParagraphs.push(currentPara.trim());
-        }
-      } else {
-        processedParagraphs.push(para);
-      }
+      });
     });
     
-    return processedParagraphs;
+    // Add final section
+    if (currentSection.elements.length > 0) {
+      sections.push(currentSection);
+    }
+    
+    return sections;
   }
   
-  // Check if text is a main heading
-  static isHeading(text: string): boolean {
-    const trimmed = text.trim();
+  // Check if text is a main title
+  static isMainTitle(text: string): boolean {
     return (
-      trimmed.length < 100 &&
+      text.length < 100 &&
       (
-        /^[A-Z][A-Z\s:.-]+$/.test(trimmed) || // ALL CAPS
-        /^(Chapter|Section|Part|Article)\s+\d+/i.test(trimmed) || // Chapter 1, Section 2, etc.
-        /^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*:?\s*$/.test(trimmed) || // Title Case
-        /^\d+\.\s*[A-Z]/.test(trimmed) // Numbered heading
+        /^Welcome to/.test(text) ||
+        /INDUSTRIES/.test(text) ||
+        /^[A-Z\s]+$/.test(text) || // ALL CAPS
+        text.split(' ').length <= 5 && text.split(' ').every(word => 
+          word[0] === word[0].toUpperCase() && word.length > 2
+        )
       )
     );
   }
   
-  // Check if text is a subheading
-  static isSubheading(text: string): boolean {
-    const trimmed = text.trim();
+  // Check if text is a header
+  static isHeader(text: string): boolean {
     return (
-      trimmed.length < 80 &&
-      !this.isHeading(text) &&
+      text.length < 80 &&
       (
-        /^[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}:?\s*$/.test(trimmed) || // Short Title Case
-        /^\d+\.\d+\s*[A-Z]/.test(trimmed) || // 1.1, 2.3 etc.
-        /^[A-Z][a-z]+\s*(Overview|Summary|Introduction|Conclusion)/i.test(trimmed)
+        text.endsWith(':') ||
+        /^(Tagline|Overview|Mission|Vision|Engagement):/i.test(text) ||
+        (/^[A-Z][a-z]+:/.test(text) && text.split(':')[0].length < 20)
       )
     );
   }

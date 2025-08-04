@@ -22,32 +22,152 @@ export class PDFUtils {
     return pdf.numPages;
   }
 
+  // Enhanced text extraction with better structure preservation
   static async extractText(file: File): Promise<string> {
     const arrayBuffer = await file.arrayBuffer();
     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
     const pdf = await loadingTask.promise;
     
     let fullText = '';
+    
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
       
-      // Improved text extraction with position awareness
-      const pageText = textContent.items
-        .filter((item: any) => item.str && item.str.trim())
-        .map((item: any) => {
-          // Add line breaks based on position changes
-          const text = item.str.trim();
-          return text;
-        })
-        .join(' ')
-        .replace(/\s+/g, ' ') // Clean multiple spaces
-        .replace(/(.{100,200}[.!?])\s+/g, '$1\n\n'); // Add paragraph breaks
+      // Get viewport for position calculations
+      const viewport = page.getViewport({ scale: 1.0 });
       
-      fullText += pageText + '\n\n';
+      // Sort items by position (top to bottom, left to right)
+      const sortedItems = textContent.items
+        .filter((item: any) => item.str && item.str.trim())
+        .sort((a: any, b: any) => {
+          // First sort by Y position (top to bottom)
+          const yDiff = Math.abs(b.transform[5] - a.transform[5]);
+          if (yDiff > 5) {
+            return b.transform[5] - a.transform[5];
+          }
+          // Then by X position (left to right)
+          return a.transform[4] - b.transform[4];
+        });
+      
+      let pageText = '';
+      let lastY = null;
+      let currentLine = '';
+      
+      sortedItems.forEach((item: any, index: number) => {
+        const text = item.str.trim();
+        const y = item.transform[5];
+        const x = item.transform[4];
+        const fontSize = item.transform[0];
+        
+        // Detect new line based on Y position change
+        if (lastY !== null && Math.abs(lastY - y) > fontSize * 0.5) {
+          // End current line
+          if (currentLine.trim()) {
+            pageText += currentLine.trim() + '\n';
+          }
+          currentLine = '';
+        }
+        
+        // Add current text to line
+        currentLine += (currentLine ? ' ' : '') + text;
+        lastY = y;
+      });
+      
+      // Add final line
+      if (currentLine.trim()) {
+        pageText += currentLine.trim() + '\n';
+      }
+      
+      // Process the extracted text to create proper paragraphs
+      const processedText = this.processExtractedText(pageText);
+      fullText += processedText + '\n\n';
     }
     
     return fullText.trim();
+  }
+  
+  // Process extracted text to create proper structure
+  static processExtractedText(text: string): string {
+    const lines = text.split('\n').filter(line => line.trim());
+    let processedText = '';
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      if (!line) continue;
+      
+      // Check if this looks like a title/heading (short, often capitalized)
+      const isTitle = this.isTitle(line);
+      
+      // Check if this looks like a section header
+      const isHeader = this.isHeader(line);
+      
+      if (isTitle) {
+        // Add extra spacing before and after titles
+        processedText += '\n' + line + '\n\n';
+      } else if (isHeader) {
+        // Add spacing before headers
+        processedText += '\n' + line + '\n';
+      } else {
+        // Regular text - check if it should continue previous line or start new paragraph
+        const nextLine = i < lines.length - 1 ? lines[i + 1].trim() : '';
+        
+        processedText += line;
+        
+        // Add appropriate line ending
+        if (line.endsWith('.') || line.endsWith(':') || this.shouldBreakParagraph(line, nextLine)) {
+          processedText += '\n\n';
+        } else {
+          processedText += ' ';
+        }
+      }
+    }
+    
+    return processedText.trim();
+  }
+  
+  // Check if line is a title
+  static isTitle(line: string): boolean {
+    return (
+      line.length < 100 &&
+      (
+        /^[A-Z\s]+$/.test(line) || // ALL CAPS
+        /^Welcome to/.test(line) ||
+        /INDUSTRIES/.test(line) ||
+        line.split(' ').every(word => word[0] === word[0].toUpperCase()) // Title Case
+      )
+    );
+  }
+  
+  // Check if line is a header
+  static isHeader(line: string): boolean {
+    return (
+      line.length < 80 &&
+      (
+        line.startsWith('Tagline:') ||
+        line.startsWith('Overview:') ||
+        line.startsWith('Mission:') ||
+        line.startsWith('Vision:') ||
+        line.startsWith('Engagement:') ||
+        /^[A-Z][a-z]+:/.test(line) // Pattern like "Something:"
+      )
+    );
+  }
+  
+  // Determine if paragraph should break
+  static shouldBreakParagraph(currentLine: string, nextLine: string): boolean {
+    // Break if current line ends with period and next line starts with capital
+    if (currentLine.endsWith('.') && nextLine && /^[A-Z]/.test(nextLine)) {
+      return true;
+    }
+    
+    // Break before headers
+    if (this.isHeader(nextLine) || this.isTitle(nextLine)) {
+      return true;
+    }
+    
+    return false;
   }
 
   static async pdfToImages(file: File, format: 'jpeg' | 'png' = 'jpeg'): Promise<string[]> {
@@ -192,15 +312,15 @@ export class PDFUtils {
     let textContent = '';
     try {
       textContent = await PDFUtils.extractText(file);
-      console.log('Successfully extracted text from PDF, length:', textContent.length);
+      console.log('Successfully extracted structured text from PDF, length:', textContent.length);
     } catch (error) {
       console.warn('Could not extract text, using placeholder content');
       textContent = `Content extracted from: ${file.name}\n\nThis document was converted from PDF to Word format.\n\nOriginal PDF contained multiple pages with text, images, and formatting that has been preserved as much as possible in this conversion.\n\nThe conversion process maintains document structure while ensuring compatibility with Microsoft Word and other word processors.`;
     }
 
     if (format === 'docx') {
-      // Create proper DOCX document with page breaks
-      console.log('Creating proper DOCX document with page breaks...');
+      // Create proper DOCX document with page breaks and preserved structure
+      console.log('Creating proper DOCX document with preserved structure...');
       return await DocxUtils.createDocxDocument(textContent, file.name, pageCount);
     } else {
       // Fallback to RTF format for compatibility

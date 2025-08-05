@@ -2,13 +2,13 @@
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, convertInchesToTwip, PageBreak } from 'docx';
 
 export class DocxUtils {
-  // Create proper DOCX document from PDF text with exact formatting preservation
+  // Create comprehensive DOCX document with all extracted content
   static async createDocxDocument(textContent: string, fileName: string, pageCount: number = 1): Promise<Blob> {
-    console.log('Creating DOCX document with exact formatting preservation');
+    console.log('Creating comprehensive DOCX document with all content preserved');
     
     const documentParagraphs: Paragraph[] = [];
     
-    // Add document title
+    // Add document title with better formatting
     documentParagraphs.push(
       new Paragraph({
         children: [
@@ -23,52 +23,59 @@ export class DocxUtils {
         spacing: {
           after: 400,
         },
+        alignment: AlignmentType.CENTER,
       })
     );
     
-    // Process text content to maintain original structure
-    const structuredContent = this.parseStructuredContent(textContent);
+    // Split content by page breaks and process each section
+    const sections = this.splitContentBySections(textContent);
     
-    // Add page numbers if multiple pages
-    let currentPage = 1;
+    console.log(`Processing ${sections.length} content sections`);
     
-    structuredContent.forEach((section, sectionIndex) => {
-      // Add page break for new pages (except first content)
-      if (sectionIndex > 0 && section.isNewPage) {
+    let currentPageNum = 1;
+    
+    sections.forEach((section, sectionIndex) => {
+      // Add page break and page number for new pages
+      if (section.isPageBreak && sectionIndex > 0) {
         documentParagraphs.push(
           new Paragraph({
             children: [new PageBreak()],
           })
         );
         
-        currentPage++;
+        currentPageNum++;
         
-        // Add page header
+        // Add subtle page indicator
         documentParagraphs.push(
           new Paragraph({
             children: [
               new TextRun({
-                text: `Page ${currentPage}`,
-                bold: true,
-                size: 20,
-                color: "666666",
+                text: `--- Page ${currentPageNum} ---`,
+                italics: true,
+                size: 18,
+                color: "808080",
               }),
             ],
             spacing: {
               after: 200,
             },
+            alignment: AlignmentType.CENTER,
           })
         );
       }
       
-      // Process each element in the section
-      section.elements.forEach((element) => {
-        if (element.type === 'title') {
+      // Process the content paragraphs
+      const paragraphs = this.parseContentIntoParagraphs(section.content);
+      
+      paragraphs.forEach((para) => {
+        if (!para.text.trim()) return;
+        
+        if (para.type === 'title') {
           documentParagraphs.push(
             new Paragraph({
               children: [
                 new TextRun({
-                  text: element.text,
+                  text: para.text,
                   bold: true,
                   size: 28, // 14pt
                   color: "1F497D",
@@ -82,12 +89,12 @@ export class DocxUtils {
               alignment: AlignmentType.CENTER,
             })
           );
-        } else if (element.type === 'header') {
+        } else if (para.type === 'heading') {
           documentParagraphs.push(
             new Paragraph({
               children: [
                 new TextRun({
-                  text: element.text,
+                  text: para.text,
                   bold: true,
                   size: 24, // 12pt
                   color: "365F91",
@@ -100,12 +107,16 @@ export class DocxUtils {
               },
             })
           );
-        } else if (element.type === 'paragraph') {
-          const formattedText = this.formatTextRuns(element.text);
-          
+        } else {
+          // Regular paragraph with proper formatting
           documentParagraphs.push(
             new Paragraph({
-              children: formattedText,
+              children: [
+                new TextRun({
+                  text: para.text,
+                  size: 22, // 11pt
+                }),
+              ],
               spacing: {
                 after: 120,
                 line: 276, // 1.15 line spacing
@@ -117,11 +128,11 @@ export class DocxUtils {
       });
     });
     
-    // Create the document with proper styling
+    // Create the final document
     const doc = new Document({
       creator: "PDF Converter Tool",
       title: `Converted from ${fileName}`,
-      description: "PDF converted to Word document with preserved formatting",
+      description: "PDF converted to Word document with complete content preservation",
       styles: {
         default: {
           document: {
@@ -172,122 +183,176 @@ export class DocxUtils {
       ],
     });
     
-    // Generate the DOCX file using browser-compatible method
+    // Generate the DOCX file
     const blob = await Packer.toBlob(doc);
     
-    console.log('DOCX document created with preserved structure, size:', blob.size, 'bytes');
+    console.log(`Comprehensive DOCX document created with ${documentParagraphs.length} paragraphs, size:`, blob.size, 'bytes');
     
     return blob;
   }
   
-  // Parse text content to maintain original structure
-  static parseStructuredContent(text: string): Array<{elements: Array<{type: string, text: string}>, isNewPage: boolean}> {
-    const sections: Array<{elements: Array<{type: string, text: string}>, isNewPage: boolean}> = [];
+  // Split content by sections and page breaks
+  static splitContentBySections(text: string): Array<{content: string, isPageBreak: boolean}> {
+    const sections: Array<{content: string, isPageBreak: boolean}> = [];
     
-    // Split by double line breaks to identify sections
-    const parts = text.split(/\n\s*\n/).filter(part => part.trim());
+    // First split by explicit page breaks
+    const pageBreakSections = text.split(/--- PAGE BREAK ---/);
     
-    let currentSection = { elements: [], isNewPage: false };
-    
-    parts.forEach((part, index) => {
-      const lines = part.split('\n').filter(line => line.trim());
-      
-      lines.forEach((line, lineIndex) => {
-        const trimmed = line.trim();
-        
-        if (!trimmed) return;
-        
-        // Detect different types of content
-        if (this.isMainTitle(trimmed)) {
-          // Main title
-          if (currentSection.elements.length > 0) {
-            sections.push(currentSection);
-            currentSection = { elements: [], isNewPage: false };
-          }
-          
-          currentSection.elements.push({
-            type: 'title',
-            text: trimmed
-          });
-        } else if (this.isHeader(trimmed)) {
-          // Section header
-          currentSection.elements.push({
-            type: 'header',
-            text: trimmed
-          });
-        } else {
-          // Regular paragraph
-          currentSection.elements.push({
-            type: 'paragraph',
-            text: trimmed
-          });
-        }
-      });
-    });
-    
-    // Add final section
-    if (currentSection.elements.length > 0) {
-      sections.push(currentSection);
-    }
-    
-    return sections;
-  }
-  
-  // Check if text is a main title
-  static isMainTitle(text: string): boolean {
-    return (
-      text.length < 100 &&
-      (
-        /^Welcome to/.test(text) ||
-        /INDUSTRIES/.test(text) ||
-        /^[A-Z\s]+$/.test(text) || // ALL CAPS
-        text.split(' ').length <= 5 && text.split(' ').every(word => 
-          word[0] === word[0].toUpperCase() && word.length > 2
-        )
-      )
-    );
-  }
-  
-  // Check if text is a header
-  static isHeader(text: string): boolean {
-    return (
-      text.length < 80 &&
-      (
-        text.endsWith(':') ||
-        /^(Tagline|Overview|Mission|Vision|Engagement):/i.test(text) ||
-        (/^[A-Z][a-z]+:/.test(text) && text.split(':')[0].length < 20)
-      )
-    );
-  }
-  
-  // Format text with proper styling
-  static formatTextRuns(text: string): TextRun[] {
-    const runs: TextRun[] = [];
-    
-    // Simple formatting - can be enhanced for bold, italic detection
-    const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/);
-    
-    parts.forEach(part => {
-      if (part.startsWith('**') && part.endsWith('**')) {
-        // Bold text
-        runs.push(new TextRun({
-          text: part.slice(2, -2),
-          bold: true,
-        }));
-      } else if (part.startsWith('*') && part.endsWith('*')) {
-        // Italic text
-        runs.push(new TextRun({
-          text: part.slice(1, -1),
-          italics: true,
-        }));
-      } else if (part.trim()) {
-        // Regular text
-        runs.push(new TextRun({
-          text: part,
-        }));
+    pageBreakSections.forEach((section, index) => {
+      const cleanSection = section.trim();
+      if (cleanSection) {
+        sections.push({
+          content: cleanSection,
+          isPageBreak: index > 0
+        });
       }
     });
     
-    return runs.length > 0 ? runs : [new TextRun({ text })];
+    // If no explicit page breaks, create sections based on content length
+    if (sections.length === 1 && sections[0].content.length > 2000) {
+      const longContent = sections[0].content;
+      sections.length = 0; // Clear array
+      
+      const chunks = this.splitLongContent(longContent);
+      chunks.forEach((chunk, index) => {
+        sections.push({
+          content: chunk,
+          isPageBreak: index > 0
+        });
+      });
+    }
+    
+    console.log(`Split content into ${sections.length} sections`);
+    return sections;
+  }
+  
+  // Split very long content into manageable chunks
+  static splitLongContent(content: string): string[] {
+    const maxChunkSize = 2500;
+    const chunks: string[] = [];
+    
+    if (content.length <= maxChunkSize) {
+      return [content];
+    }
+    
+    // Split by paragraphs first
+    const paragraphs = content.split(/\n\s*\n/).filter(p => p.trim());
+    
+    let currentChunk = '';
+    
+    paragraphs.forEach((paragraph) => {
+      // If adding this paragraph would exceed chunk size
+      if ((currentChunk + paragraph).length > maxChunkSize && currentChunk) {
+        chunks.push(currentChunk.trim());
+        currentChunk = paragraph + '\n\n';
+      } else {
+        currentChunk += paragraph + '\n\n';
+      }
+    });
+    
+    // Add final chunk
+    if (currentChunk.trim()) {
+      chunks.push(currentChunk.trim());
+    }
+    
+    return chunks;
+  }
+  
+  // Parse content into structured paragraphs
+  static parseContentIntoParagraphs(content: string): Array<{type: string, text: string}> {
+    const paragraphs: Array<{type: string, text: string}> = [];
+    
+    // Split by double line breaks to get paragraphs
+    const rawParagraphs = content.split(/\n\s*\n/).filter(p => p.trim());
+    
+    rawParagraphs.forEach((para) => {
+      const cleanPara = para.trim();
+      if (!cleanPara) return;
+      
+      // Determine paragraph type
+      if (this.isMainTitle(cleanPara)) {
+        paragraphs.push({
+          type: 'title',
+          text: cleanPara
+        });
+      } else if (this.isHeading(cleanPara)) {
+        paragraphs.push({
+          type: 'heading',
+          text: cleanPara
+        });
+      } else {
+        // Split very long paragraphs
+        if (cleanPara.length > 800) {
+          const subParagraphs = this.splitLongParagraph(cleanPara);
+          subParagraphs.forEach(subPara => {
+            paragraphs.push({
+              type: 'paragraph',
+              text: subPara
+            });
+          });
+        } else {
+          paragraphs.push({
+            type: 'paragraph',
+            text: cleanPara
+          });
+        }
+      }
+    });
+    
+    return paragraphs;
+  }
+  
+  // Split very long paragraphs into smaller ones
+  static splitLongParagraph(paragraph: string): string[] {
+    const maxLength = 600;
+    const sentences = paragraph.split(/[.!?]+\s+/);
+    const parts: string[] = [];
+    
+    let currentPart = '';
+    
+    sentences.forEach((sentence, index) => {
+      const sentenceWithPeriod = sentence.trim() + (index < sentences.length - 1 ? '. ' : '');
+      
+      if ((currentPart + sentenceWithPeriod).length > maxLength && currentPart) {
+        parts.push(currentPart.trim());
+        currentPart = sentenceWithPeriod;
+      } else {
+        currentPart += sentenceWithPeriod;
+      }
+    });
+    
+    if (currentPart.trim()) {
+      parts.push(currentPart.trim());
+    }
+    
+    return parts;
+  }
+  
+  // Enhanced title detection
+  static isMainTitle(text: string): boolean {
+    return (
+      text.length < 120 &&
+      (
+        /^[A-Z][A-Z\s\d\-.,!?:]+$/.test(text) || // ALL CAPS
+        /^Welcome to/.test(text) ||
+        /INDUSTRIES|COMPANY|CORPORATION|PRESENTATION/.test(text) ||
+        (text.split(' ').length <= 6 && text.split(' ').every(word => 
+          word[0] === word[0].toUpperCase() && word.length > 1
+        ))
+      )
+    );
+  }
+  
+  // Enhanced heading detection
+  static isHeading(text: string): boolean {
+    return (
+      text.length < 100 &&
+      (
+        text.endsWith(':') ||
+        /^(Tagline|Overview|Mission|Vision|Engagement|About|Services|Products|Introduction|Conclusion|Summary):/i.test(text) ||
+        /^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*:?\s*$/.test(text) ||
+        /^\d+[\.\)]\s+[A-Z]/.test(text)
+      )
+    );
   }
 }

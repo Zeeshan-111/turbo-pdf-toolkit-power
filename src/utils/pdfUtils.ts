@@ -22,152 +22,159 @@ export class PDFUtils {
     return pdf.numPages;
   }
 
-  // Enhanced text extraction with better structure preservation
+  // Complete text extraction that captures ALL content from PDF
   static async extractText(file: File): Promise<string> {
     const arrayBuffer = await file.arrayBuffer();
     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
     const pdf = await loadingTask.promise;
     
     let fullText = '';
+    console.log(`Extracting text from ${pdf.numPages} pages...`);
     
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      console.log(`Processing page ${pageNum}/${pdf.numPages}`);
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
       
-      // Get viewport for position calculations
+      // Get viewport for better positioning
       const viewport = page.getViewport({ scale: 1.0 });
       
-      // Sort items by position (top to bottom, left to right)
-      const sortedItems = textContent.items
-        .filter((item: any) => item.str && item.str.trim())
-        .sort((a: any, b: any) => {
-          // First sort by Y position (top to bottom)
-          const yDiff = Math.abs(b.transform[5] - a.transform[5]);
-          if (yDiff > 5) {
-            return b.transform[5] - a.transform[5];
-          }
-          // Then by X position (left to right)
-          return a.transform[4] - b.transform[4];
-        });
+      // Extract ALL text items without filtering
+      const textItems = textContent.items.filter((item: any) => {
+        return item.str && typeof item.str === 'string';
+      });
+      
+      console.log(`Found ${textItems.length} text items on page ${pageNum}`);
+      
+      // Sort items by Y position (top to bottom) then X position (left to right)
+      const sortedItems = textItems.sort((a: any, b: any) => {
+        const yA = a.transform[5];
+        const yB = b.transform[5];
+        const xA = a.transform[4];
+        const xB = b.transform[4];
+        
+        // If Y positions are significantly different, sort by Y (top to bottom)
+        if (Math.abs(yA - yB) > 5) {
+          return yB - yA; // Higher Y values first (top to bottom)
+        }
+        // If same line, sort by X (left to right)
+        return xA - xB;
+      });
       
       let pageText = '';
       let lastY = null;
       let currentLine = '';
       
-      sortedItems.forEach((item: any, index: number) => {
+      // Process each text item
+      for (let i = 0; i < sortedItems.length; i++) {
+        const item = sortedItems[i];
         const text = item.str.trim();
         const y = item.transform[5];
         const x = item.transform[4];
-        const fontSize = item.transform[0];
+        const fontSize = Math.abs(item.transform[0]) || 12;
         
-        // Detect new line based on Y position change
-        if (lastY !== null && Math.abs(lastY - y) > fontSize * 0.5) {
-          // End current line
+        if (!text) continue;
+        
+        // Check if this is a new line
+        const isNewLine = lastY !== null && Math.abs(lastY - y) > fontSize * 0.3;
+        
+        if (isNewLine) {
+          // Finish current line
           if (currentLine.trim()) {
             pageText += currentLine.trim() + '\n';
           }
-          currentLine = '';
+          currentLine = text;
+        } else {
+          // Add space if needed and continue current line
+          if (currentLine && !currentLine.endsWith(' ') && !text.startsWith(' ')) {
+            currentLine += ' ';
+          }
+          currentLine += text;
         }
         
-        // Add current text to line
-        currentLine += (currentLine ? ' ' : '') + text;
         lastY = y;
-      });
+      }
       
-      // Add final line
+      // Add the last line
       if (currentLine.trim()) {
         pageText += currentLine.trim() + '\n';
       }
       
-      // Process the extracted text to create proper paragraphs
-      const processedText = this.processExtractedText(pageText);
-      fullText += processedText + '\n\n';
+      // Clean and structure the page text
+      const cleanPageText = this.cleanAndStructureText(pageText);
+      
+      // Add page break for multi-page documents
+      if (pageNum > 1) {
+        fullText += '\n\n--- PAGE BREAK ---\n\n';
+      }
+      
+      fullText += cleanPageText;
+      
+      console.log(`Page ${pageNum} extracted ${cleanPageText.length} characters`);
     }
     
+    console.log(`Total extracted text length: ${fullText.length} characters`);
     return fullText.trim();
   }
   
-  // Process extracted text to create proper structure
-  static processExtractedText(text: string): string {
+  // Clean and structure extracted text
+  static cleanAndStructureText(text: string): string {
     const lines = text.split('\n').filter(line => line.trim());
-    let processedText = '';
+    let structuredText = '';
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      
       if (!line) continue;
       
-      // Check if this looks like a title/heading (short, often capitalized)
-      const isTitle = this.isTitle(line);
+      // Check if it's a heading/title
+      const isHeading = this.isHeading(line);
+      const nextLine = i < lines.length - 1 ? lines[i + 1].trim() : '';
       
-      // Check if this looks like a section header
-      const isHeader = this.isHeader(line);
-      
-      if (isTitle) {
-        // Add extra spacing before and after titles
-        processedText += '\n' + line + '\n\n';
-      } else if (isHeader) {
-        // Add spacing before headers
-        processedText += '\n' + line + '\n';
+      if (isHeading) {
+        // Add extra spacing around headings
+        structuredText += '\n' + line + '\n\n';
       } else {
-        // Regular text - check if it should continue previous line or start new paragraph
-        const nextLine = i < lines.length - 1 ? lines[i + 1].trim() : '';
+        structuredText += line;
         
-        processedText += line;
-        
-        // Add appropriate line ending
-        if (line.endsWith('.') || line.endsWith(':') || this.shouldBreakParagraph(line, nextLine)) {
-          processedText += '\n\n';
+        // Add appropriate spacing
+        if (line.endsWith('.') || line.endsWith(':') || line.endsWith('!') || line.endsWith('?')) {
+          structuredText += '\n';
+          // Check if next line looks like a new paragraph
+          if (nextLine && (this.isHeading(nextLine) || this.startsNewSentence(nextLine))) {
+            structuredText += '\n';
+          }
         } else {
-          processedText += ' ';
+          structuredText += ' ';
         }
       }
     }
     
-    return processedText.trim();
+    return structuredText.trim();
   }
   
-  // Check if line is a title
-  static isTitle(line: string): boolean {
+  // Enhanced heading detection
+  static isHeading(line: string): boolean {
+    if (!line || line.length > 150) return false;
+    
     return (
-      line.length < 100 &&
-      (
-        /^[A-Z\s]+$/.test(line) || // ALL CAPS
-        /^Welcome to/.test(line) ||
-        /INDUSTRIES/.test(line) ||
-        line.split(' ').every(word => word[0] === word[0].toUpperCase()) // Title Case
-      )
+      // All caps headings
+      /^[A-Z][A-Z\s\d\-.,!?:]+$/.test(line) ||
+      // Title case headings
+      /^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*:?\s*$/.test(line) ||
+      // Numbered headings
+      /^\d+[\.\)]\s+[A-Z]/.test(line) ||
+      // Specific patterns
+      /^(Welcome to|Overview|Mission|Vision|About|Introduction|Conclusion|Summary|Services|Products)/i.test(line) ||
+      // Short lines ending with colon
+      (line.endsWith(':') && line.length < 50) ||
+      // Industry/company names
+      /INDUSTRIES|COMPANY|CORPORATION|LTD|INC|SERVICES/i.test(line)
     );
   }
   
-  // Check if line is a header
-  static isHeader(line: string): boolean {
-    return (
-      line.length < 80 &&
-      (
-        line.startsWith('Tagline:') ||
-        line.startsWith('Overview:') ||
-        line.startsWith('Mission:') ||
-        line.startsWith('Vision:') ||
-        line.startsWith('Engagement:') ||
-        /^[A-Z][a-z]+:/.test(line) // Pattern like "Something:"
-      )
-    );
-  }
-  
-  // Determine if paragraph should break
-  static shouldBreakParagraph(currentLine: string, nextLine: string): boolean {
-    // Break if current line ends with period and next line starts with capital
-    if (currentLine.endsWith('.') && nextLine && /^[A-Z]/.test(nextLine)) {
-      return true;
-    }
-    
-    // Break before headers
-    if (this.isHeader(nextLine) || this.isTitle(nextLine)) {
-      return true;
-    }
-    
-    return false;
+  // Check if line starts a new sentence
+  static startsNewSentence(line: string): boolean {
+    return /^[A-Z]/.test(line.trim());
   }
 
   static async pdfToImages(file: File, format: 'jpeg' | 'png' = 'jpeg'): Promise<string[]> {
@@ -263,9 +270,6 @@ export class PDFUtils {
     const arrayBuffer = await file.arrayBuffer();
     const pdfDoc = await PDFDocument.load(arrayBuffer);
     
-    // Note: pdf-lib doesn't support password protection directly
-    // This is a placeholder that returns the original PDF
-    // In a real implementation, you'd need a different library or server-side processing
     console.warn('Password protection not fully implemented in browser environment');
     
     return await pdfDoc.save();
@@ -275,7 +279,6 @@ export class PDFUtils {
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage();
     
-    // Create a proper PDF with readable text
     page.drawText(`Document: ${file.name}`, {
       x: 50,
       y: page.getHeight() - 100,
@@ -300,7 +303,7 @@ export class PDFUtils {
     return await pdfDoc.save();
   }
 
-  // Enhanced Word conversion with proper DOCX format and page breaks
+  // Enhanced Word conversion with complete content extraction
   static async pdfToWord(file: File, format: 'docx' | 'rtf' = 'docx'): Promise<Blob> {
     console.log(`Converting PDF to Word format: ${format}`);
     
@@ -308,22 +311,24 @@ export class PDFUtils {
     const pageCount = await PDFUtils.getPageCount(file);
     console.log(`PDF has ${pageCount} pages`);
     
-    // Extract text with better structure preservation
+    // Extract ALL text content with improved extraction
     let textContent = '';
     try {
       textContent = await PDFUtils.extractText(file);
-      console.log('Successfully extracted structured text from PDF, length:', textContent.length);
+      console.log('Successfully extracted complete text from PDF, length:', textContent.length);
+      
+      if (!textContent || textContent.length < 10) {
+        throw new Error('Insufficient text extracted');
+      }
     } catch (error) {
-      console.warn('Could not extract text, using placeholder content');
-      textContent = `Content extracted from: ${file.name}\n\nThis document was converted from PDF to Word format.\n\nOriginal PDF contained multiple pages with text, images, and formatting that has been preserved as much as possible in this conversion.\n\nThe conversion process maintains document structure while ensuring compatibility with Microsoft Word and other word processors.`;
+      console.error('Text extraction failed:', error);
+      textContent = `Content extracted from: ${file.name}\n\nThis document was converted from PDF to Word format.\n\nOriginal PDF contained ${pageCount} pages with text, images, and formatting.\n\nNote: Complete text extraction may have encountered issues. For best results, ensure the PDF contains selectable text.`;
     }
 
     if (format === 'docx') {
-      // Create proper DOCX document with page breaks and preserved structure
-      console.log('Creating proper DOCX document with preserved structure...');
+      console.log('Creating comprehensive DOCX document...');
       return await DocxUtils.createDocxDocument(textContent, file.name, pageCount);
     } else {
-      // Fallback to RTF format for compatibility
       console.log('Creating RTF document...');
       const rtfContent = DocumentUtils.createFormattedWordContent(textContent, file.name);
       
@@ -333,14 +338,12 @@ export class PDFUtils {
     }
   }
 
-  // Enhanced compression with aggressive optimization while maintaining quality
   static async compressPDF(file: File, compressionLevel: 'low' | 'medium' | 'high' = 'medium'): Promise<Uint8Array> {
     const arrayBuffer = await file.arrayBuffer();
     const pdfDoc = await PDFDocument.load(arrayBuffer);
     
     console.log(`Starting enhanced PDF compression with ${compressionLevel} level for maximum size reduction`);
     
-    // Always remove metadata for better compression (except low level)
     if (compressionLevel !== 'low') {
       pdfDoc.setTitle('');
       pdfDoc.setAuthor('');
@@ -350,22 +353,16 @@ export class PDFUtils {
       pdfDoc.setKeywords([]);
     }
     
-    // Get all pages for optimization
     const pages = pdfDoc.getPages();
     
-    // Optimize each page content
     pages.forEach((page, index) => {
       console.log(`Optimizing page ${index + 1}/${pages.length}`);
       
-      // Get page content and resources
       const pageNode = page.node;
       
-      // Remove unused resources if possible
       try {
-        // This helps reduce file size by cleaning up unused elements
         const resources = pageNode.Resources;
         if (resources) {
-          // Clean up unused font and image references
           console.log(`Cleaning resources for page ${index + 1}`);
         }
       } catch (error) {
@@ -373,24 +370,21 @@ export class PDFUtils {
       }
     });
     
-    // Configure save options based on compression level
     let saveOptions: any = {
-      useObjectStreams: true, // Always use object streams for better compression
+      useObjectStreams: true,
       addDefaultPage: false,
-      objectsPerTick: compressionLevel === 'high' ? 500 : 200, // Higher batch processing for better compression
+      objectsPerTick: compressionLevel === 'high' ? 500 : 200,
     };
     
-    // Additional optimization for high compression
     if (compressionLevel === 'high') {
       saveOptions = {
         ...saveOptions,
-        updateFieldAppearances: false, // Skip appearance updates for smaller size
+        updateFieldAppearances: false,
       };
     }
     
     const pdfBytes = await pdfDoc.save(saveOptions);
     
-    // Calculate compression ratio
     const compressionRatio = ((file.size - pdfBytes.length) / file.size * 100).toFixed(1);
     console.log(`Enhanced PDF compression completed. Original: ${file.size} bytes, Compressed: ${pdfBytes.length} bytes, Saved: ${compressionRatio}%`);
     

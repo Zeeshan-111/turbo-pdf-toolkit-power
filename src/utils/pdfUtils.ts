@@ -13,6 +13,11 @@ export interface CompressionStats {
   compressionRatio: number;
 }
 
+// Type guard to check if item is TextItem
+function isTextItem(item: any): item is pdfjsLib.TextItem {
+  return item && typeof item.str === 'string' && item.transform;
+}
+
 // Export PDFUtils class for compatibility with existing code
 export class PDFUtils {
   static async getPageCount(file: File): Promise<number> {
@@ -39,15 +44,15 @@ export class PDFUtils {
       // Get viewport for better positioning
       const viewport = page.getViewport({ scale: 1.0 });
       
-      // Extract ALL text items without filtering
-      const textItems = textContent.items.filter((item: any) => {
-        return item.str && typeof item.str === 'string';
+      // Extract ALL text items with proper type checking
+      const textItems = textContent.items.filter(isTextItem).filter((item: pdfjsLib.TextItem) => {
+        return item.str && typeof item.str === 'string' && item.str.trim().length > 0;
       });
       
       console.log(`Found ${textItems.length} text items on page ${pageNum}`);
       
       // Sort items by Y position (top to bottom) then X position (left to right)
-      const sortedItems = textItems.sort((a: any, b: any) => {
+      const sortedItems = textItems.sort((a: pdfjsLib.TextItem, b: pdfjsLib.TextItem) => {
         const yA = a.transform[5];
         const yB = b.transform[5];
         const xA = a.transform[4];
@@ -62,7 +67,7 @@ export class PDFUtils {
       });
       
       let pageText = '';
-      let lastY = null;
+      let lastY: number | null = null;
       let currentLine = '';
       
       // Process each text item

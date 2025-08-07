@@ -24,49 +24,54 @@ const SocialIntegration: React.FC = () => {
         return t;
       }(document, "script", "twitter-wjs"));
 
-      // Facebook SDK
-      (window as any).fbAsyncInit = function() {
-        (window as any).FB.init({
-          appId: 'YOUR_FACEBOOK_APP_ID',
-          cookie: true,
-          xfbml: true,
-          version: 'v18.0'
-        });
-      };
-
-      (function(d, s, id) {
-        var js, fjs = d.getElementsByTagName(s)[0];
-        if (d.getElementById(id)) return;
-        js = d.createElement(s);
-        js.id = id;
-        (js as any).src = 'https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v18.0';
-        fjs.parentNode?.insertBefore(js, fjs);
-      }(document, 'script', 'facebook-jssdk'));
+      // Facebook SDK - Only initialize if proper app ID is configured
+      // Remove the placeholder app ID for security
+      if (process.env.NODE_ENV === 'production') {
+        // In production, this should be configured through environment variables
+        console.warn('Facebook integration requires proper App ID configuration');
+      }
     };
 
-    // Add social sharing buttons to tools
+    // Add social sharing buttons to tools - using secure DOM manipulation
     const addSocialButtons = () => {
       const toolPages = document.querySelector('[data-tool-page]');
       if (toolPages && !document.querySelector('.social-share-buttons')) {
         const socialContainer = document.createElement('div');
         socialContainer.className = 'social-share-buttons flex gap-4 justify-center mt-8';
-        socialContainer.innerHTML = `
-          <a href="https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(document.title)}" 
-             target="_blank" rel="noopener" 
-             class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
-            Share on Twitter
-          </a>
-          <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}" 
-             target="_blank" rel="noopener"
-             class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-            Share on Facebook
-          </a>
-          <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}" 
-             target="_blank" rel="noopener"
-             class="bg-blue-700 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors">
-            Share on LinkedIn
-          </a>
-        `;
+        
+        // Secure URL encoding and sanitization
+        const currentUrl = encodeURIComponent(window.location.href);
+        const pageTitle = encodeURIComponent(document.title.replace(/[<>]/g, '')); // Basic XSS prevention
+        
+        // Create Twitter button
+        const twitterLink = document.createElement('a');
+        twitterLink.href = `https://twitter.com/intent/tweet?url=${currentUrl}&text=${pageTitle}`;
+        twitterLink.target = '_blank';
+        twitterLink.rel = 'noopener noreferrer';
+        twitterLink.className = 'bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors';
+        twitterLink.textContent = 'Share on Twitter';
+        
+        // Create Facebook button
+        const facebookLink = document.createElement('a');
+        facebookLink.href = `https://www.facebook.com/sharer/sharer.php?u=${currentUrl}`;
+        facebookLink.target = '_blank';
+        facebookLink.rel = 'noopener noreferrer';
+        facebookLink.className = 'bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors';
+        facebookLink.textContent = 'Share on Facebook';
+        
+        // Create LinkedIn button
+        const linkedinLink = document.createElement('a');
+        linkedinLink.href = `https://www.linkedin.com/sharing/share-offsite/?url=${currentUrl}`;
+        linkedinLink.target = '_blank';
+        linkedinLink.rel = 'noopener noreferrer';
+        linkedinLink.className = 'bg-blue-700 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition-colors';
+        linkedinLink.textContent = 'Share on LinkedIn';
+        
+        // Append buttons using secure DOM manipulation instead of innerHTML
+        socialContainer.appendChild(twitterLink);
+        socialContainer.appendChild(facebookLink);
+        socialContainer.appendChild(linkedinLink);
+        
         toolPages.appendChild(socialContainer);
       }
     };

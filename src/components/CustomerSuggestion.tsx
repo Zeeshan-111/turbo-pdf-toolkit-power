@@ -16,12 +16,44 @@ const CustomerSuggestion = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Input sanitization function
+  const sanitizeInput = (input: string): string => {
+    return input
+      .replace(/[<>]/g, '') // Remove potential XSS characters
+      .trim()
+      .slice(0, 5000); // Enforce length limit
+  };
+
+  // Email validation
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.message.trim()) {
+    const sanitizedMessage = sanitizeInput(formData.message);
+    const sanitizedName = sanitizeInput(formData.name);
+    const sanitizedEmail = sanitizeInput(formData.email);
+
+    if (!sanitizedMessage) {
       toast("Please enter a message", {
         description: "The message field is required.",
+      });
+      return;
+    }
+
+    if (sanitizedMessage.length < 10) {
+      toast("Message too short", {
+        description: "Please provide at least 10 characters for your suggestion.",
+      });
+      return;
+    }
+
+    if (sanitizedEmail && !isValidEmail(sanitizedEmail)) {
+      toast("Invalid email", {
+        description: "Please enter a valid email address.",
       });
       return;
     }
@@ -32,9 +64,9 @@ const CustomerSuggestion = () => {
       const { error } = await supabase
         .from('suggestions')
         .insert({
-          name: formData.name || null,
-          email: formData.email || null,
-          message: formData.message
+          name: sanitizedName || null,
+          email: sanitizedEmail || null,
+          message: sanitizedMessage
         });
 
       if (error) {
@@ -42,7 +74,7 @@ const CustomerSuggestion = () => {
       }
 
       toast("Thank you for your suggestion!", {
-        description: "We appreciate your feedback and will review it soon.",
+        description: "We appreciate your feedback and will review it soon. Your privacy is important to us.",
       });
       
       setFormData({ name: "", email: "", message: "" });
@@ -57,9 +89,19 @@ const CustomerSuggestion = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    
+    // Apply length limits during input
+    let sanitizedValue = value;
+    if (name === 'message') {
+      sanitizedValue = value.slice(0, 5000);
+    } else if (name === 'name' || name === 'email') {
+      sanitizedValue = value.slice(0, 255);
+    }
+
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: sanitizedValue
     }));
   };
 
@@ -82,7 +124,7 @@ const CustomerSuggestion = () => {
           <CardHeader>
             <CardTitle className="text-white">Customer Suggestion</CardTitle>
             <CardDescription className="text-gray-400">
-              Your input helps us build better tools for everyone.
+              Your input helps us build better tools for everyone. We respect your privacy and will only use your information to improve our services.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -99,6 +141,7 @@ const CustomerSuggestion = () => {
                     value={formData.name}
                     onChange={handleChange}
                     disabled={isSubmitting}
+                    maxLength={255}
                     className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
                     placeholder="Your name"
                   />
@@ -114,6 +157,7 @@ const CustomerSuggestion = () => {
                     value={formData.email}
                     onChange={handleChange}
                     disabled={isSubmitting}
+                    maxLength={255}
                     className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
                     placeholder="your.email@example.com"
                   />
@@ -122,7 +166,7 @@ const CustomerSuggestion = () => {
               
               <div>
                 <label htmlFor="message" className="block text-sm font-medium text-gray-300 mb-2">
-                  Your Suggestion *
+                  Your Suggestion * (minimum 10 characters)
                 </label>
                 <Textarea
                   id="message"
@@ -132,14 +176,18 @@ const CustomerSuggestion = () => {
                   required
                   disabled={isSubmitting}
                   rows={6}
+                  maxLength={5000}
                   className="bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500 resize-none"
                   placeholder="Please share your detailed suggestion, feature request, or feedback here..."
                 />
+                <div className="text-right text-sm text-gray-400 mt-1">
+                  {formData.message.length}/5000 characters
+                </div>
               </div>
               
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || formData.message.length < 10}
                 size="lg"
                 className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white disabled:opacity-50"
               >
@@ -152,6 +200,11 @@ const CustomerSuggestion = () => {
                   </>
                 )}
               </Button>
+              
+              <p className="text-xs text-gray-500 text-center">
+                By submitting this form, you acknowledge that we may store your feedback to improve our services. 
+                We do not share your personal information with third parties.
+              </p>
             </form>
           </CardContent>
         </Card>

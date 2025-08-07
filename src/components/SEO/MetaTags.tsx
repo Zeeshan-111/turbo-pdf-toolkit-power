@@ -26,7 +26,38 @@ const MetaTags: React.FC<MetaTagsProps> = ({
   alternateLanguages = []
 }) => {
   const fullTitle = title.includes('PDF Tools Pro') ? title : `${title} | PDF Tools Pro - Free Online PDF Toolkit`;
-  const currentUrl = canonicalUrl || (typeof window !== 'undefined' ? window.location.href : 'https://pdftoolspro.com');
+  
+  // Ensure canonical URL is properly formatted and absolute
+  const getCanonicalUrl = () => {
+    if (canonicalUrl) {
+      // If it's already absolute, use it
+      if (canonicalUrl.startsWith('http')) {
+        return canonicalUrl;
+      }
+      // If it's relative, make it absolute
+      return `https://pdftoolspro.com${canonicalUrl.startsWith('/') ? '' : '/'}${canonicalUrl}`;
+    }
+    
+    // Fallback to current URL, but clean it up
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      // Remove trailing slash except for root
+      if (url.pathname !== '/' && url.pathname.endsWith('/')) {
+        url.pathname = url.pathname.slice(0, -1);
+      }
+      // Remove common query parameters that shouldn't be canonical
+      url.searchParams.delete('utm_source');
+      url.searchParams.delete('utm_medium');
+      url.searchParams.delete('utm_campaign');
+      url.searchParams.delete('gclid');
+      url.searchParams.delete('fbclid');
+      return url.toString();
+    }
+    
+    return 'https://pdftoolspro.com';
+  };
+
+  const currentUrl = getCanonicalUrl();
 
   return (
     <Helmet>
@@ -35,6 +66,13 @@ const MetaTags: React.FC<MetaTagsProps> = ({
       <meta name="description" content={description} />
       {keywords && <meta name="keywords" content={keywords} />}
       <link rel="canonical" href={currentUrl} />
+      
+      {/* Favicon - Multiple formats for better compatibility */}
+      <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+      <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+      <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+      <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+      <link rel="manifest" href="/site.webmanifest" />
       
       {/* Language alternatives */}
       {alternateLanguages.map(lang => (
@@ -112,15 +150,8 @@ const MetaTags: React.FC<MetaTagsProps> = ({
       <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
       <link rel="dns-prefetch" href="https://www.google-analytics.com" />
-      
-      {/* Favicon and Icons */}
-      <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-      <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-      <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-      <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-      <link rel="manifest" href="/site.webmanifest" />
 
-      {/* Google Analytics 4 */}
+      {/* Google Analytics 4 - Optimized Loading */}
       <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
       <script>
         {`
@@ -129,7 +160,8 @@ const MetaTags: React.FC<MetaTagsProps> = ({
           gtag('js', new Date());
           gtag('config', 'G-XXXXXXXXXX', {
             page_title: '${title}',
-            page_location: '${currentUrl}'
+            page_location: '${currentUrl}',
+            custom_map: {'custom_parameter_1': 'tool_usage'}
           });
         `}
       </script>

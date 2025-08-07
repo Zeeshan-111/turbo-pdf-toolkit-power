@@ -13,9 +13,19 @@ export interface CompressionStats {
   compressionRatio: number;
 }
 
+// Define TextItem interface to match PDF.js structure
+interface TextItem {
+  str: string;
+  transform: number[];
+  width: number;
+  height: number;
+  fontName: string;
+  hasEOL: boolean;
+}
+
 // Type guard to check if item is TextItem
-function isTextItem(item: any): item is pdfjsLib.TextItem {
-  return item && typeof item.str === 'string' && item.transform;
+function isTextItem(item: any): item is TextItem {
+  return item && typeof item.str === 'string' && Array.isArray(item.transform);
 }
 
 // Export PDFUtils class for compatibility with existing code
@@ -45,14 +55,14 @@ export class PDFUtils {
       const viewport = page.getViewport({ scale: 1.0 });
       
       // Extract ALL text items with proper type checking
-      const textItems = textContent.items.filter(isTextItem).filter((item: pdfjsLib.TextItem) => {
+      const textItems = textContent.items.filter(isTextItem).filter((item: TextItem) => {
         return item.str && typeof item.str === 'string' && item.str.trim().length > 0;
       });
       
       console.log(`Found ${textItems.length} text items on page ${pageNum}`);
       
       // Sort items by Y position (top to bottom) then X position (left to right)
-      const sortedItems = textItems.sort((a: pdfjsLib.TextItem, b: pdfjsLib.TextItem) => {
+      const sortedItems = textItems.sort((a: TextItem, b: TextItem) => {
         const yA = a.transform[5];
         const yB = b.transform[5];
         const xA = a.transform[4];

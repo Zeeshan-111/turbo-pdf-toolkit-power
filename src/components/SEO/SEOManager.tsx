@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import MetaTags from './MetaTags';
@@ -63,9 +62,42 @@ const SEOManager: React.FC = () => {
     addStructuredData();
   }, [location]);
 
+  // Get page-specific meta data based on current route
+  const getPageMetaData = () => {
+    const pathname = location.pathname;
+    
+    // Default meta data
+    let title = "PDF Tools Pro - Free Online PDF Toolkit";
+    let description = "Professional PDF tools for converting, merging, splitting, and editing PDF documents. Free, secure, and easy to use.";
+    
+    // Route-specific meta data
+    if (pathname === '/') {
+      title = "PDF Tools Pro - Free Online PDF Toolkit";
+      description = "Professional PDF tools for converting, merging, splitting, and editing PDF documents. Free, secure, and easy to use.";
+    } else if (pathname.includes('/tools/pdf-to-word')) {
+      title = "PDF to Word Converter - Free Online Tool";
+      description = "Convert PDF documents to editable Word files instantly. Free, secure, and no registration required.";
+    } else if (pathname.includes('/tools/merge-pdf')) {
+      title = "Merge PDF Files - Combine PDFs Online";
+      description = "Combine multiple PDF files into one document. Fast, secure, and completely free online PDF merger.";
+    } else if (pathname.includes('/tools/')) {
+      // Generic tool page fallback
+      const toolName = pathname.replace('/tools/', '').replace('-', ' ');
+      title = `${toolName.charAt(0).toUpperCase() + toolName.slice(1)} - PDF Tools Pro`;
+      description = `Use our free ${toolName} tool to manage your PDF documents online. Secure, fast, and easy to use.`;
+    }
+    
+    return { title, description };
+  };
+
+  const { title, description } = getPageMetaData();
+
   return (
     <>
-      <MetaTags />
+      <MetaTags 
+        title={title}
+        description={description}
+      />
       <SocialIntegration />
       <ResourceOptimizer />
       <RedirectManager />

@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Rocket, ShieldCheck, Code, LayoutDashboard, Wand2, Search, Share2, Download, Compress, Lock, FileText, Image, FileSearch2 } from "lucide-react";
+import { Rocket, ShieldCheck, Code, LayoutDashboard, Wand2, Search, Share2, Download, FileArchive, Lock, FileText, Image, FileSearch2 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CustomerSuggestion from "@/components/CustomerSuggestion";
@@ -15,11 +15,11 @@ const Index = () => {
     { name: "PNG to PDF", description: "Convert PNG images into a single PDF.", icon: FileText, link: "/tools/png-to-pdf" },
     { name: "Merge PDF", description: "Combine multiple PDFs into one.", icon: LayoutDashboard, link: "/tools/merge-pdf" },
     { name: "Split PDF", description: "Extract pages from a PDF to create new PDFs.", icon: LayoutDashboard, link: "/tools/split-pdf" },
-    { name: "Compress PDF", description: "Reduce PDF file size for easier sharing.", icon: Compress, link: "/tools/compress-pdf" },
+    { name: "Compress PDF", description: "Reduce PDF file size for easier sharing.", icon: FileArchive, link: "/tools/compress-pdf" },
     { name: "Lock PDF", description: "Add password protection to your PDF.", icon: Lock, link: "/tools/lock-pdf" },
     { name: "Word to PDF", description: "Convert Word documents to PDF.", icon: FileText, link: "/tools/word-to-pdf" },
     { name: "PDF Reader", description: "View PDF files directly in your browser.", icon: FileSearch2, link: "/tools/pdf-reader" },
-    { name: "JPG Compress", description: "Compress JPG files to reduce file size.", icon: Compress, link: "/tools/jpg-compress" },
+    { name: "JPG Compress", description: "Compress JPG files to reduce file size.", icon: FileArchive, link: "/tools/jpg-compress" },
   ];
 
   const features = [

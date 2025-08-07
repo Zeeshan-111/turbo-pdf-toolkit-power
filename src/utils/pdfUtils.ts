@@ -54,15 +54,16 @@ export class PDFUtils {
       // Get viewport for better positioning
       const viewport = page.getViewport({ scale: 1.0 });
       
-      // Extract ALL text items with proper type checking
-      const textItems = textContent.items.filter(isTextItem).filter((item: TextItem) => {
+      // Extract ALL text items with proper type checking - filter first, then cast
+      const allItems = textContent.items.filter(isTextItem);
+      const textItems = allItems.filter((item) => {
         return item.str && typeof item.str === 'string' && item.str.trim().length > 0;
       });
       
       console.log(`Found ${textItems.length} text items on page ${pageNum}`);
       
       // Sort items by Y position (top to bottom) then X position (left to right)
-      const sortedItems = textItems.sort((a: TextItem, b: TextItem) => {
+      const sortedItems = textItems.sort((a, b) => {
         const yA = a.transform[5];
         const yB = b.transform[5];
         const xA = a.transform[4];

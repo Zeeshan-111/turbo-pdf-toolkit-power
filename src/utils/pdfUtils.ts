@@ -55,7 +55,7 @@ export class PDFUtils {
       const viewport = page.getViewport({ scale: 1.0 });
       
       // Extract ALL text items with proper type checking - filter first, then cast
-      const allItems = textContent.items.filter(isTextItem);
+      const allItems = textContent.items.filter(isTextItem) as TextItem[];
       const textItems = allItems.filter((item) => {
         return item.str && typeof item.str === 'string' && item.str.trim().length > 0;
       });

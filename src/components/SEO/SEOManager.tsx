@@ -39,11 +39,12 @@ const SEOManager: React.FC = () => {
       const pathname = location.pathname;
       const baseUrl = window.location.origin;
       
+      // Create array to hold all schemas
+      const schemas: any[] = [];
+
       // Always include website and organization schemas
-      const schemas = [
-        generateWebsiteSchema(),
-        generateOrganizationSchema()
-      ];
+      schemas.push(generateWebsiteSchema());
+      schemas.push(generateOrganizationSchema());
 
       // Add tool-specific schema for tool pages
       if (pathname.includes('/tools/')) {

@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CustomerSuggestion from "@/components/CustomerSuggestion";
 import PrivacyNotice from "@/components/SEO/PrivacyNotice";
+import ArticlesGuides from "@/components/ArticlesGuides";
 
 const Index = () => {
   const tools = [
@@ -128,6 +129,9 @@ const Index = () => {
           </div>
         </div>
       </section>
+      
+      {/* Articles and Guides Section */}
+      <ArticlesGuides />
       
       <CustomerSuggestion />
       <PrivacyNotice />

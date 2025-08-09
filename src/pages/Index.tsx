@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import CustomerSuggestion from "@/components/CustomerSuggestion";
 import PrivacyNotice from "@/components/SEO/PrivacyNotice";
 import ArticlesGuides from "@/components/ArticlesGuides";
+import MetaTags from "@/components/SEO/MetaTags";
 
 const Index = () => {
   const tools = [
@@ -33,47 +34,54 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900" data-tool-page>
+      <MetaTags 
+        title="PDF Tools Pro - 12 Best Free PDF Toolkit for Conversion & Editing"
+        description="Ultimate PDF tools pro toolkit with 12 free conversion & editing tools. Convert PDF to Word, merge, split, compress PDFs. No watermark, no signup required."
+        keywords="PDF tools pro, PDF toolkit, PDF conversion, PDF editing, convert PDF to Word, merge PDF free, compress PDF, PDF editor online"
+      />
+      
       <Header />
 
-      {/* Hero Section with SEO-optimized content */}
+      {/* Hero Section with SEO-optimized content and proper H1 */}
       <section className="py-20 text-center">
         <div className="container mx-auto px-4">
           <h1 className="text-5xl font-bold text-white mb-6 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-            Best PDF Tools Online - Free, Fast & No Watermark
+            PDF Tools Pro - Ultimate 12-Tool Toolkit for Conversion & Editing
           </h1>
           <p className="text-gray-300 text-lg mb-8 max-w-4xl mx-auto">
-            Use our <strong>best PDF tools online</strong> to <strong>merge PDF free</strong>, <strong>compress PDF to 1MB</strong>, and <strong>convert PDF to Word</strong> instantly. 
-            Professional results with <strong>no watermark PDF tools</strong> and no signup required.
+            Use our <strong>PDF tools pro toolkit</strong> with 12 professional <strong>conversion and editing</strong> features. 
+            <strong>Convert PDF to Word</strong>, <strong>merge PDF free</strong>, and <strong>compress PDF to 1MB</strong> instantly. 
+            Professional <strong>PDF editing</strong> results with <strong>no watermark PDF tools</strong> and no signup required.
           </p>
           <div className="flex flex-wrap justify-center gap-4 mb-8">
             <Link to="/tools/pdf-to-word" className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-full transition-colors duration-300">
-              PDF to Word Converter
+              PDF Conversion Tool
             </Link>
             <Link to="/tools/merge-pdf" className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-8 rounded-full transition-colors duration-300">
-              Merge PDF Files
+              PDF Editing Suite
             </Link>
             <Link to="/tools/compress-pdf" className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full transition-colors duration-300">
-              Compress PDF
+              PDF Toolkit Access
             </Link>
           </div>
           
-          {/* SEO Keywords Section */}
+          {/* SEO Keywords Section with missing keywords */}
           <div className="text-gray-400 text-sm max-w-3xl mx-auto">
             <p>
-              <strong>Popular tools:</strong> PDF to JPG online, JPG to PDF converter, split PDF file, lock PDF with password, 
-              Word to PDF online, compress JPG images, PDF reader browser, PNG to PDF converter
+              <strong>Complete PDF toolkit:</strong> PDF conversion tools, PDF editing suite, merge PDF toolkit, 
+              split PDF editor, compress PDF converter, password protection tools, and professional PDF editing features
             </p>
           </div>
         </div>
       </section>
 
-      {/* Tools Grid with enhanced descriptions */}
+      {/* Tools Grid with enhanced descriptions incorporating missing keywords */}
       <section className="py-12">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-semibold text-white mb-4 text-center">Complete PDF Toolkit - All Free</h2>
+          <h2 className="text-3xl font-semibold text-white mb-4 text-center">Complete PDF Conversion & Editing Toolkit - All Free</h2>
           <p className="text-gray-300 text-center mb-8 max-w-2xl mx-auto">
-            Access professional PDF tools with no signup, no watermarks, and no file size limits. 
-            Process your documents securely with client-side processing.
+            Access our professional 12-tool <strong>PDF toolkit</strong> with advanced <strong>conversion and editing</strong> capabilities. 
+            Process your documents securely with client-side processing using <strong>PDF Tools Pro</strong>.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {tools.map((tool) => (
@@ -89,13 +97,13 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Features Section with enhanced copy */}
+      {/* Features Section with enhanced copy incorporating keywords */}
       <section className="py-16 bg-gray-900">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-semibold text-white mb-4 text-center">Why Choose PDF Tools Pro?</h2>
+          <h2 className="text-3xl font-semibold text-white mb-4 text-center">Why Choose PDF Tools Pro Toolkit?</h2>
           <p className="text-gray-300 text-center mb-12 max-w-2xl mx-auto">
-            Join over 2 million users who trust our platform for professional PDF processing. 
-            Here's what makes us the best choice for your document needs.
+            Join over 2 million users who trust our <strong>PDF conversion and editing toolkit</strong> for professional document processing. 
+            Here's what makes <strong>PDF Tools Pro</strong> the ultimate choice for your needs.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature) => (
@@ -109,22 +117,22 @@ const Index = () => {
         </div>
       </section>
 
-      {/* SEO Benefits Section */}
+      {/* SEO Benefits Section with keyword optimization */}
       <section className="py-12 bg-gray-800">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-2xl font-semibold text-white mb-6">Professional PDF Processing Made Simple</h2>
+          <h2 className="text-2xl font-semibold text-white mb-6">Professional PDF Conversion & Editing Made Simple</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             <div>
-              <h3 className="text-lg font-medium text-blue-400 mb-2">No File Size Limits</h3>
-              <p className="text-gray-300 text-sm">Process large PDFs up to 100MB without restrictions. Perfect for professional documents and presentations.</p>
+              <h3 className="text-lg font-medium text-blue-400 mb-2">Advanced PDF Toolkit</h3>
+              <p className="text-gray-300 text-sm">Complete <strong>PDF conversion and editing toolkit</strong> with 12 professional tools. Perfect for business and personal use with <strong>PDF Tools Pro</strong>.</p>
             </div>
             <div>
-              <h3 className="text-lg font-medium text-green-400 mb-2">Client-Side Processing</h3>
-              <p className="text-gray-300 text-sm">Your files never leave your device during processing. Maximum privacy and security guaranteed.</p>
+              <h3 className="text-lg font-medium text-green-400 mb-2">Secure PDF Editing</h3>
+              <p className="text-gray-300 text-sm">Your files never leave your device during <strong>PDF editing and conversion</strong>. Maximum privacy and security guaranteed with our toolkit.</p>
             </div>
             <div>
-              <h3 className="text-lg font-medium text-purple-400 mb-2">Enterprise Quality</h3>
-              <p className="text-gray-300 text-sm">Professional-grade output suitable for business use. No quality loss or watermarks on your documents.</p>
+              <h3 className="text-lg font-medium text-purple-400 mb-2">Professional PDF Conversion</h3>
+              <p className="text-gray-300 text-sm">Enterprise-grade <strong>PDF conversion</strong> output suitable for business use. No quality loss or watermarks on your documents.</p>
             </div>
           </div>
         </div>

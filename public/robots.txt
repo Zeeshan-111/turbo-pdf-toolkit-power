@@ -1,50 +1,62 @@
 
-# Robots.txt for PDF Tools Pro - Optimized for Maximum Crawling
+# Robots.txt for PDF Tools Pro - Enhanced SEO Crawling Optimization
 User-agent: *
 Allow: /
-Crawl-delay: 1
+Crawl-delay: 0.5
 
-# Priority pages for crawling
+# Priority pages for maximum crawling efficiency
 Allow: /tools/
+Allow: /tools/pdf-to-word
+Allow: /tools/merge-pdf
+Allow: /tools/compress-pdf
+Allow: /tools/split-pdf
+Allow: /tools/pdf-to-jpg
+Allow: /tools/jpg-to-pdf
+Allow: /tools/pdf-to-png
+Allow: /tools/png-to-pdf
+Allow: /tools/lock-pdf
+Allow: /tools/word-to-pdf
+Allow: /tools/pdf-reader
+Allow: /tools/jpg-compress
 Allow: /blog/
 Allow: /
 Allow: /sitemap.xml
+Allow: /sitemap-*.xml
 
-# Disallow admin and private areas only
-Disallow: /admin/
-Disallow: /private/
-Disallow: /tmp/
-Disallow: /api/
-Disallow: /*.pdf$
-Disallow: /404
-Disallow: /*?
-Disallow: /*#
-
-# Allow all major search engines
+# Enhanced crawling permissions for major search engines
 User-agent: Googlebot
 Allow: /
-Crawl-delay: 1
+Crawl-delay: 0.2
+Request-rate: 5/1m
 
 User-agent: Bingbot
 Allow: /
-Crawl-delay: 1
+Crawl-delay: 0.5
+Request-rate: 3/1m
 
 User-agent: Slurp
 Allow: /
-Crawl-delay: 1
+Crawl-delay: 0.5
 
 User-agent: DuckDuckBot
 Allow: /
-Crawl-delay: 1
+Crawl-delay: 0.5
+
+User-agent: Applebot
+Allow: /
+Crawl-delay: 0.5
 
 User-agent: facebookexternalhit
 Allow: /
+Crawl-delay: 0.1
 
 User-agent: Twitterbot
 Allow: /
+Crawl-delay: 0.1
 
 User-agent: LinkedInBot
 Allow: /
+Crawl-delay: 0.3
 
 User-agent: WhatsApp
 Allow: /
@@ -52,7 +64,16 @@ Allow: /
 User-agent: TelegramBot
 Allow: /
 
-# Block harmful bots
+User-agent: SkypeUriPreview
+Allow: /
+
+User-agent: SlackBot
+Allow: /
+
+User-agent: DiscordBot
+Allow: /
+
+# Block harmful and resource-intensive bots
 User-agent: AhrefsBot
 Disallow: /
 
@@ -68,10 +89,61 @@ Disallow: /
 User-agent: MauiBot
 Disallow: /
 
-# Sitemap location (most important)
-Sitemap: https://pdftoolspro.com/sitemap.xml
+User-agent: BLEXBot
+Disallow: /
 
-# Additional sitemaps for different content types
-Sitemap: https://pdftoolspro.com/sitemap-tools.xml
-Sitemap: https://pdftoolspro.com/sitemap-blog.xml
-Sitemap: https://pdftoolspro.com/sitemap-images.xml
+User-agent: DataForSeoBot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: MegaIndex
+Disallow: /
+
+User-agent: SeznamBot
+Disallow: /
+
+# Disallow admin, private, and system areas
+Disallow: /admin/
+Disallow: /private/
+Disallow: /tmp/
+Disallow: /api/
+Disallow: /node_modules/
+Disallow: /src/
+Disallow: /build/
+Disallow: /dist/
+Disallow: /.git/
+Disallow: /*.json$
+Disallow: /*.xml$ except /sitemap*.xml
+Disallow: /*.pdf$ except /sample-files/
+Disallow: /404
+Disallow: /error
+Disallow: /*?utm_*
+Disallow: /*?gclid=*
+Disallow: /*?fbclid=*
+Disallow: /*#*
+
+# Allow specific file types that are important for SEO
+Allow: /*.css$
+Allow: /*.js$
+Allow: /*.png$
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.gif$
+Allow: /*.svg$
+Allow: /*.webp$
+Allow: /*.ico$
+Allow: /*.woff$
+Allow: /*.woff2$
+Allow: /*.ttf$
+
+# Enhanced sitemap locations for comprehensive SEO coverage
+Sitemap: https://peaceful-beignet-225186.netlify.app/sitemap.xml
+Sitemap: https://peaceful-beignet-225186.netlify.app/sitemap-tools.xml
+Sitemap: https://peaceful-beignet-225186.netlify.app/sitemap-blog.xml
+Sitemap: https://peaceful-beignet-225186.netlify.app/sitemap-images.xml
+Sitemap: https://peaceful-beignet-225186.netlify.app/sitemap-pages.xml
+
+# Host specification for proper domain authority
+Host: https://peaceful-beignet-225186.netlify.app

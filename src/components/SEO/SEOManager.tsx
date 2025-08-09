@@ -7,6 +7,7 @@ import ResourceOptimizer from './ResourceOptimizer';
 import RedirectManager from './RedirectManager';
 import ErrorHandler from './ErrorHandler';
 import SecurityHeaders from './SecurityHeaders';
+import BacklinksManager from './BacklinksManager';
 import { 
   generateWebsiteSchema, 
   generateSoftwareApplicationSchema, 
@@ -297,6 +298,7 @@ const SEOManager: React.FC = () => {
       <RedirectManager />
       <ErrorHandler />
       <SecurityHeaders />
+      <BacklinksManager />
     </>
   );
 };

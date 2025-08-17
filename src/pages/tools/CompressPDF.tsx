@@ -93,7 +93,7 @@ const CompressPDF = () => {
           ...result,
           originalFile: file,
           fileName: file.name,
-          mode: result.mode || settingsToUse.mode // Use the actual mode used (may have been upgraded)
+          mode: result.mode // Now using the mode from the result
         });
       }
 
@@ -145,7 +145,7 @@ const CompressPDF = () => {
         ...result,
         originalFile: file.originalFile,
         fileName: file.fileName,
-        mode: newMode
+        mode: result.mode // Use the mode from the result
       };
 
       const updatedFiles = [...processedFiles];

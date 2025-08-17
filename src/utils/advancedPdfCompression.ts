@@ -1,4 +1,3 @@
-
 import { PDFDocument, PDFArray, PDFDict, PDFName, PDFNumber, PDFRef, PDFStream } from 'pdf-lib';
 
 export interface CompressionOptions {
@@ -17,6 +16,7 @@ export interface CompressionResult {
   compressedSize: number;
   compressionRatio: number;
   optimizations: string[];
+  mode: 'low' | 'medium' | 'high';
 }
 
 export class AdvancedPDFCompressor {
@@ -82,7 +82,7 @@ export class AdvancedPDFCompressor {
     // If compression is less than 10%, automatically retry with higher mode
     if (compressionRatio < 10 && options.mode !== 'high') {
       console.log(`Low compression ratio (${compressionRatio}%), retrying with higher mode`);
-      const higherMode = options.mode === 'low' ? 'medium' : 'high';
+      const higherMode: 'low' | 'medium' | 'high' = options.mode === 'low' ? 'medium' : 'high';
       const retryOptions = { ...options, mode: higherMode };
       return await this.compress(file, retryOptions);
     }
@@ -94,7 +94,8 @@ export class AdvancedPDFCompressor {
       originalSize,
       compressedSize: compressedData.length,
       compressionRatio,
-      optimizations
+      optimizations,
+      mode: options.mode
     };
   }
 

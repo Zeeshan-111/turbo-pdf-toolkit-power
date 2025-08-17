@@ -1,3 +1,4 @@
+
 import { PDFDocument, PDFPage, rgb } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import { DocumentUtils } from './documentUtils';
@@ -361,7 +362,7 @@ export class PDFUtils {
     // Use the new advanced compressor with optimal settings
     const compressionOptions = {
       mode: compressionLevel,
-      imageDPI: compressionLevel === 'high' ? 72 : compressionLevel === 'medium' ? 96 : 150,
+      imageDPI: (compressionLevel === 'high' ? 72 : compressionLevel === 'medium' ? 96 : 150) as 72 | 96 | 150,
       removeMetadata: compressionLevel !== 'low',
       removeAnnotations: compressionLevel === 'high',
       removeBookmarks: compressionLevel === 'high',

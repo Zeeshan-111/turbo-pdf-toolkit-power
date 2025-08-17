@@ -1,4 +1,3 @@
-
 import { PDFDocument, PDFPage, rgb } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import { DocumentUtils } from './documentUtils';
@@ -357,22 +356,24 @@ export class PDFUtils {
   }
 
   static async compressPDF(file: File, compressionLevel: 'low' | 'medium' | 'high' = 'medium'): Promise<Uint8Array> {
-    console.log(`Using advanced PDF compression with ${compressionLevel} level`);
+    console.log(`Using advanced PDF compression engine with ${compressionLevel} level for maximum optimization`);
     
-    // Use the new advanced compressor with optimal settings
+    // Use the new advanced compressor with aggressive settings for real compression
     const compressionOptions = {
       mode: compressionLevel,
       imageDPI: (compressionLevel === 'high' ? 72 : compressionLevel === 'medium' ? 96 : 150) as 72 | 96 | 150,
-      removeMetadata: compressionLevel !== 'low',
-      removeAnnotations: compressionLevel === 'high',
-      removeBookmarks: compressionLevel === 'high',
-      convertImagesToJPEG: compressionLevel !== 'low',
-      imageQuality: compressionLevel === 'high' ? 60 : compressionLevel === 'medium' ? 75 : 85
+      removeMetadata: true, // Always remove metadata for better compression
+      removeAnnotations: compressionLevel !== 'low', // Remove for medium and high
+      removeBookmarks: compressionLevel === 'high', // Only for maximum compression
+      convertImagesToJPEG: compressionLevel !== 'low', // Convert images for better compression
+      imageQuality: compressionLevel === 'high' ? 50 : compressionLevel === 'medium' ? 70 : 85
     };
 
     const result = await AdvancedPDFCompressor.compress(file, compressionOptions);
     
-    console.log(`Advanced PDF compression completed: ${result.compressionRatio}% reduction`);
+    console.log(`Advanced PDF compression completed with real optimization: ${result.compressionRatio}% reduction`);
+    console.log(`Optimizations applied: ${result.optimizations.join(', ')}`);
+    
     return result.compressedData;
   }
 }
@@ -381,7 +382,7 @@ export const compressPDF = async (
   file: File,
   compressionLevel: 'low' | 'medium' | 'high' = 'medium'
 ): Promise<{ blob: Blob; stats: CompressionStats }> => {
-  console.log(`Starting enhanced PDF compression with ${compressionLevel} level for maximum file size reduction`);
+  console.log(`Starting professional PDF compression with ${compressionLevel} level for significant file size reduction`);
   
   const originalSize = file.size;
   const compressedBytes = await PDFUtils.compressPDF(file, compressionLevel);
@@ -393,7 +394,12 @@ export const compressPDF = async (
     compressionRatio: Math.round(((originalSize - compressedBlob.size) / originalSize) * 100)
   };
 
-  console.log(`Enhanced compression completed with improved results:`, stats);
+  console.log(`Professional compression completed with significant results:`, stats);
+  
+  // Log warning if compression is unexpectedly low
+  if (stats.compressionRatio < 10) {
+    console.warn(`Low compression ratio achieved (${stats.compressionRatio}%). File may already be optimized or contain mainly text content.`);
+  }
   
   return { blob: compressedBlob, stats };
 };

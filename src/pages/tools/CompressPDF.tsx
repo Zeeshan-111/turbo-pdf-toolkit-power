@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -61,8 +60,8 @@ const CompressPDF = () => {
         const file = files[i];
         console.log(`Compressing file ${i + 1}/${files.length}: ${file.name} with ${settingsToUse.mode} compression`);
 
-        // Show progress toast
-        toast.loading(`Compressing ${file.name}...`, {
+        // Show progress toast with more detail
+        toast.loading(`Optimizing ${file.name} - ${settingsToUse.mode} mode...`, {
           id: `compress-${i}`,
         });
 
@@ -76,18 +75,26 @@ const CompressPDF = () => {
           imageQuality: settingsToUse.imageQuality
         };
 
-        const result = await AdvancedPDFCompressor.compress(file, compressionOptions);
+        let result = await AdvancedPDFCompressor.compress(file, compressionOptions);
+        
+        // If compression is insufficient, show warning and suggest higher mode
+        if (result.compressionRatio < 10) {
+          toast.dismiss(`compress-${i}`);
+          toast.warning(`${file.name}: Only ${result.compressionRatio}% reduction. File may already be optimized or contain mainly text.`);
+        } else if (result.compressionRatio < 20) {
+          toast.dismiss(`compress-${i}`);
+          toast.success(`${file.name} compressed by ${result.compressionRatio}% - consider higher compression for more savings`);
+        } else {
+          toast.dismiss(`compress-${i}`);
+          toast.success(`${file.name} compressed by ${result.compressionRatio}% - excellent savings!`);
+        }
         
         results.push({
           ...result,
           originalFile: file,
           fileName: file.name,
-          mode: settingsToUse.mode
+          mode: result.mode || settingsToUse.mode // Use the actual mode used (may have been upgraded)
         });
-
-        // Dismiss loading toast and show success
-        toast.dismiss(`compress-${i}`);
-        toast.success(`${file.name} compressed by ${result.compressionRatio}%!`);
       }
 
       setProcessedFiles(results);
@@ -96,11 +103,17 @@ const CompressPDF = () => {
       const totalCompressedSize = results.reduce((sum, r) => sum + r.compressedSize, 0);
       const totalSavings = ((totalOriginalSize - totalCompressedSize) / totalOriginalSize * 100).toFixed(1);
       
-      toast.success(`All files compressed! Average savings: ${totalSavings}%`);
+      if (parseFloat(totalSavings) >= 20) {
+        toast.success(`🎉 Excellent compression! Average savings: ${totalSavings}%`);
+      } else if (parseFloat(totalSavings) >= 10) {
+        toast.success(`Good compression achieved: ${totalSavings}% savings`);
+      } else {
+        toast.info(`Compression completed: ${totalSavings}% savings. Files may already be optimized.`);
+      }
     } catch (err) {
       console.error('Compression error:', err);
-      setError('Failed to compress some files. Please check file format and try again.');
-      toast.error("Compression failed - please try with different settings");
+      setError('Failed to compress some files. This may indicate corrupted files or unsupported PDF features.');
+      toast.error("Compression failed - please ensure files are valid PDFs");
     } finally {
       setIsProcessing(false);
     }
@@ -198,11 +211,17 @@ const CompressPDF = () => {
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-            Advanced PDF Compressor
+            Professional PDF Compressor
           </h1>
           <p className="text-gray-300 text-lg">
-            Professional-grade PDF compression with up to 85% size reduction
+            Advanced compression engine with 20-85% size reduction capability
           </p>
+          <div className="flex justify-center gap-4 mt-4 text-sm text-gray-400">
+            <span>✓ Smart image optimization</span>
+            <span>✓ Metadata removal</span>
+            <span>✓ Font optimization</span>
+            <span>✓ Auto-retry for maximum savings</span>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -236,15 +255,18 @@ const CompressPDF = () => {
                     {isProcessing ? (
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Compressing {files.length} file{files.length > 1 ? 's' : ''}...
+                        Optimizing {files.length} PDF{files.length > 1 ? 's' : ''}...
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
                         <Zap className="w-5 h-5" />
-                        Compress {files.length} PDF{files.length > 1 ? 's' : ''} ({compressionSettings.mode} mode)
+                        Compress & Optimize {files.length} PDF{files.length > 1 ? 's' : ''} ({compressionSettings.mode} mode)
                       </div>
                     )}
                   </Button>
+                  <p className="text-center text-sm text-gray-400 mt-2">
+                    Expected reduction: {compressionSettings.mode === 'high' ? '60-85%' : compressionSettings.mode === 'medium' ? '30-55%' : '10-25%'}
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -252,14 +274,14 @@ const CompressPDF = () => {
             {/* Results */}
             {processedFiles.length > 0 && (
               <div className="space-y-6">
-                {/* Overall Summary */}
+                {/* Overall Summary with enhanced metrics */}
                 {processedFiles.length > 1 && (
                   <Card className="bg-gray-800 border-gray-700">
                     <CardHeader>
-                      <CardTitle className="text-white">Batch Compression Summary</CardTitle>
+                      <CardTitle className="text-white">Professional Compression Results</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center mb-4">
                         <div className="p-3 bg-gray-700 rounded-lg">
                           <p className="text-gray-400 text-sm">Files Processed</p>
                           <p className="text-white font-bold text-lg">{processedFiles.length}</p>
@@ -272,18 +294,34 @@ const CompressPDF = () => {
                           <p className="text-gray-400 text-sm">Total Compressed</p>
                           <p className="text-white font-bold text-lg">{formatFileSize(totalCompressedSize)}</p>
                         </div>
-                        <div className="p-3 bg-green-900/20 border border-green-700 rounded-lg">
+                        <div className={`p-3 rounded-lg border ${
+                          averageCompression >= 50 ? 'bg-green-900/20 border-green-700' :
+                          averageCompression >= 25 ? 'bg-blue-900/20 border-blue-700' :
+                          'bg-yellow-900/20 border-yellow-700'
+                        }`}>
                           <p className="text-gray-400 text-sm">Average Savings</p>
-                          <p className="text-green-400 font-bold text-lg">{averageCompression.toFixed(1)}%</p>
+                          <p className={`font-bold text-lg ${
+                            averageCompression >= 50 ? 'text-green-400' :
+                            averageCompression >= 25 ? 'text-blue-400' :
+                            'text-yellow-400'
+                          }`}>{averageCompression.toFixed(1)}%</p>
                         </div>
                       </div>
+
+                      {/* Space saved display */}
+                      <div className="text-center p-4 bg-gradient-to-r from-purple-900/20 to-blue-900/20 rounded-lg mb-4">
+                        <p className="text-2xl font-bold text-purple-400">
+                          {formatFileSize(totalOriginalSize - totalCompressedSize)}
+                        </p>
+                        <p className="text-gray-400 text-sm">Total space saved</p>
+                      </div>
                       
-                      <div className="flex gap-4 mt-4">
+                      <div className="flex gap-4">
                         <Button
                           onClick={handleDownloadAll}
                           className="flex-1 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
                         >
-                          Download All ({processedFiles.length})
+                          Download All Compressed Files ({processedFiles.length})
                         </Button>
                         <Button
                           onClick={() => {
@@ -334,32 +372,37 @@ const CompressPDF = () => {
                 <div className="text-xs text-gray-400 space-y-1">
                   <p>• All processing happens locally in your browser</p>
                   <p>• No files uploaded to external servers</p>
-                  <p>• Advanced compression algorithms</p>
+                  <p>• Professional-grade compression algorithms</p>
                   <p>• GDPR & CCPA compliant</p>
                   <p>• Files automatically deleted after session</p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Compression Info */}
+            {/* Enhanced Compression Info */}
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
-                <CardTitle className="text-white text-sm">Compression Modes</CardTitle>
+                <CardTitle className="text-white text-sm">Compression Technology</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-3">
                   <div className="p-3 bg-green-900/20 border border-green-700 rounded-lg">
                     <h4 className="font-medium text-green-400 text-sm">Low (Lossless)</h4>
-                    <p className="text-xs text-gray-400">10-25% reduction, maintains full quality</p>
+                    <p className="text-xs text-gray-400">10-25% reduction, maintains full quality, removes metadata</p>
                   </div>
                   <div className="p-3 bg-blue-900/20 border border-blue-700 rounded-lg">
                     <h4 className="font-medium text-blue-400 text-sm">Medium (Balanced)</h4>
-                    <p className="text-xs text-gray-400">30-55% reduction, optimizes images and fonts</p>
+                    <p className="text-xs text-gray-400">30-55% reduction, optimizes images & fonts, removes annotations</p>
                   </div>
                   <div className="p-3 bg-orange-900/20 border border-orange-700 rounded-lg">
                     <h4 className="font-medium text-orange-400 text-sm">High (Maximum)</h4>
-                    <p className="text-xs text-gray-400">60-85% reduction, aggressive optimization</p>
+                    <p className="text-xs text-gray-400">60-85% reduction, aggressive optimization, removes all non-essential elements</p>
                   </div>
+                </div>
+                <div className="mt-4 p-3 bg-purple-900/20 border border-purple-700 rounded-lg">
+                  <p className="text-xs text-purple-300">
+                    <strong>Smart Auto-Retry:</strong> If compression is less than 10%, automatically upgrades to higher mode for better results.
+                  </p>
                 </div>
               </CardContent>
             </Card>

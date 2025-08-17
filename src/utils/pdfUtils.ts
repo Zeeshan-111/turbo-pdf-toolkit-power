@@ -2,6 +2,7 @@ import { PDFDocument, PDFPage, rgb } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import { DocumentUtils } from './documentUtils';
 import { DocxUtils } from './docxUtils';
+import { AdvancedPDFCompressor } from './advancedPdfCompression';
 
 // Configure PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
@@ -355,56 +356,23 @@ export class PDFUtils {
   }
 
   static async compressPDF(file: File, compressionLevel: 'low' | 'medium' | 'high' = 'medium'): Promise<Uint8Array> {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdfDoc = await PDFDocument.load(arrayBuffer);
+    console.log(`Using advanced PDF compression with ${compressionLevel} level`);
     
-    console.log(`Starting enhanced PDF compression with ${compressionLevel} level for maximum size reduction`);
-    
-    if (compressionLevel !== 'low') {
-      pdfDoc.setTitle('');
-      pdfDoc.setAuthor('');
-      pdfDoc.setSubject('');
-      pdfDoc.setCreator('');
-      pdfDoc.setProducer('');
-      pdfDoc.setKeywords([]);
-    }
-    
-    const pages = pdfDoc.getPages();
-    
-    pages.forEach((page, index) => {
-      console.log(`Optimizing page ${index + 1}/${pages.length}`);
-      
-      const pageNode = page.node;
-      
-      try {
-        const resources = pageNode.Resources;
-        if (resources) {
-          console.log(`Cleaning resources for page ${index + 1}`);
-        }
-      } catch (error) {
-        console.log(`Resource cleanup skipped for page ${index + 1}:`, error);
-      }
-    });
-    
-    let saveOptions: any = {
-      useObjectStreams: true,
-      addDefaultPage: false,
-      objectsPerTick: compressionLevel === 'high' ? 500 : 200,
+    // Use the new advanced compressor with optimal settings
+    const compressionOptions = {
+      mode: compressionLevel,
+      imageDPI: compressionLevel === 'high' ? 72 : compressionLevel === 'medium' ? 96 : 150,
+      removeMetadata: compressionLevel !== 'low',
+      removeAnnotations: compressionLevel === 'high',
+      removeBookmarks: compressionLevel === 'high',
+      convertImagesToJPEG: compressionLevel !== 'low',
+      imageQuality: compressionLevel === 'high' ? 60 : compressionLevel === 'medium' ? 75 : 85
     };
+
+    const result = await AdvancedPDFCompressor.compress(file, compressionOptions);
     
-    if (compressionLevel === 'high') {
-      saveOptions = {
-        ...saveOptions,
-        updateFieldAppearances: false,
-      };
-    }
-    
-    const pdfBytes = await pdfDoc.save(saveOptions);
-    
-    const compressionRatio = ((file.size - pdfBytes.length) / file.size * 100).toFixed(1);
-    console.log(`Enhanced PDF compression completed. Original: ${file.size} bytes, Compressed: ${pdfBytes.length} bytes, Saved: ${compressionRatio}%`);
-    
-    return pdfBytes;
+    console.log(`Advanced PDF compression completed: ${result.compressionRatio}% reduction`);
+    return result.compressedData;
   }
 }
 

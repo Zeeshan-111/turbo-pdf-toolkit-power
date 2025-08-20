@@ -1,4 +1,3 @@
-
 import { PDFDocument, PDFDict, PDFName, PDFNumber, PDFRef, PDFStream, PDFArray } from 'pdf-lib';
 
 export interface CompressionOptions {
@@ -305,14 +304,15 @@ export class AdvancedPDFCompressor {
           const contentStream = pdfDoc.context.lookup(contents);
           
           if (contentStream instanceof PDFStream) {
-            // Apply compression filters
-            const filters = [PDFName.of('FlateDecode')];
+            // Apply compression filters using the correct PDFArray API
+            const filtersArray = PDFArray.withContext(pdfDoc.context);
+            filtersArray.push(PDFName.of('FlateDecode'));
             
             if (mode === 'high') {
-              filters.push(PDFName.of('ASCIIHexDecode'));
+              filtersArray.push(PDFName.of('ASCIIHexDecode'));
             }
             
-            contentStream.dict.set(PDFName.of('Filter'), PDFArray.withContext(pdfDoc.context).pushAll(filters));
+            contentStream.dict.set(PDFName.of('Filter'), filtersArray);
           }
         }
       }

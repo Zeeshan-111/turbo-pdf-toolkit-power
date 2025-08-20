@@ -1,4 +1,3 @@
-
 import { PDFDocument, PDFDict, PDFName, PDFNumber, PDFRef, PDFStream, PDFArray } from 'pdf-lib';
 
 export interface CompressionOptions {
@@ -29,11 +28,12 @@ export class AdvancedPDFCompressor {
     const optimizations: string[] = [];
 
     try {
-      // Load PDF with compression options
+      // Load PDF with minimal options to avoid issues
       const pdfDoc = await PDFDocument.load(arrayBuffer, { 
-        ignoreEncryption: true,
-        capNumbers: false 
+        ignoreEncryption: true
       });
+
+      console.log(`Loaded PDF with ${pdfDoc.getPageCount()} pages`);
 
       // Step 1: Remove metadata (always effective)
       if (options.removeMetadata || options.mode !== 'low') {
@@ -68,7 +68,7 @@ export class AdvancedPDFCompressor {
       // Step 6: Apply compression settings based on mode
       const saveOptions = this.getSaveOptions(options.mode);
       
-      // Save with aggressive compression
+      // Save with compression
       const compressedData = await pdfDoc.save(saveOptions);
       
       const compressionRatio = Math.round(((originalSize - compressedData.length) / originalSize) * 100);
@@ -98,7 +98,7 @@ export class AdvancedPDFCompressor {
       try {
         const fallbackDoc = await PDFDocument.load(arrayBuffer);
         this.removeMetadata(fallbackDoc);
-        const fallbackData = await fallbackDoc.save({ useObjectStreams: true, compress: true });
+        const fallbackData = await fallbackDoc.save({ useObjectStreams: true });
         
         const fallbackRatio = Math.round(((originalSize - fallbackData.length) / originalSize) * 100);
         
@@ -114,6 +114,32 @@ export class AdvancedPDFCompressor {
         console.error('Fallback compression failed:', fallbackError);
         throw new Error('PDF compression failed - file may be corrupted or encrypted');
       }
+    }
+  }
+
+  private static getSaveOptions(mode: string): any {
+    const baseOptions = {
+      useObjectStreams: true,
+      addDefaultPage: false
+    };
+
+    switch (mode) {
+      case 'high':
+        return {
+          ...baseOptions,
+          objectsPerTick: 5000
+        };
+      case 'medium':
+        return {
+          ...baseOptions,
+          objectsPerTick: 2000
+        };
+      case 'low':
+      default:
+        return {
+          ...baseOptions,
+          objectsPerTick: 1000
+        };
     }
   }
 
@@ -326,33 +352,6 @@ export class AdvancedPDFCompressor {
       
     } catch (error) {
       console.log('Structure optimization error:', error);
-    }
-  }
-
-  private static getSaveOptions(mode: string): any {
-    const baseOptions = {
-      useObjectStreams: true,
-      addDefaultPage: false,
-      compress: true,
-    };
-
-    switch (mode) {
-      case 'high':
-        return {
-          ...baseOptions,
-          objectsPerTick: 5000, // Process more objects for better compression
-        };
-      case 'medium':
-        return {
-          ...baseOptions,
-          objectsPerTick: 2000,
-        };
-      case 'low':
-      default:
-        return {
-          ...baseOptions,
-          objectsPerTick: 1000,
-        };
     }
   }
 }
